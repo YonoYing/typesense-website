@@ -80,6 +80,10 @@ module.exports = {
     },
     'import-a-jsonl-file': {
       skip: { shell: commandExists('parallel') ? false : 'needs GNU parallel installed' },
+      // The example shows two alternative ways to import the same file. Run
+      // together, the second import reports "already exists" for every
+      // document, which is expected here.
+      allowEmbeddedErrors: true,
       // Guessed from the curl example: POST /collections/companies/documents/import?action
       async setup({ fixtures, ensureCollection, dropDocument, writeFile, toJsonl }) {
         await ensureCollection('companies')

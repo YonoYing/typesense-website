@@ -37,24 +37,22 @@ function truncate(text, max = 600) {
   return s.length > max ? `${s.slice(0, max)}…` : s
 }
 
-function failureTable(failures) {
-  const rows = failures.map(
-    r =>
-      `| [${r.page} › ${r.id}](${pageUrl(r)}) | ${LANG_NAMES[r.lang] || r.lang} | [line ${r.line}](${sourceUrl(r)}) |`,
-  )
-  return ['| Example | Language | Source |', '| --- | --- | --- |', ...rows].join('\n')
-}
-
-function failureDetails(failures) {
+// One section per failure, with the error shown in full (not collapsed), so
+// a reader sees what went wrong without clicking anything.
+function failureList(failures) {
   return failures
-    .map(
-      r =>
-        `<details><summary><code>${r.page} › ${r.id}</code> (${LANG_NAMES[r.lang] || r.lang})</summary>\n\n` +
-        '```\n' +
-        truncate(r.error, 1500).replace(/```/g, "'''") +
-        '\n```\n</details>',
+    .map(r =>
+      [
+        `#### \`${r.page}\` › \`${r.id}\` (${LANG_NAMES[r.lang] || r.lang})`,
+        '',
+        `[See it on the site](${pageUrl(r)}) · [Source, line ${r.line}](${sourceUrl(r)})`,
+        '',
+        '```',
+        truncate(r.error, 1500).replace(/```/g, "'''"),
+        '```',
+      ].join('\n'),
     )
-    .join('\n')
+    .join('\n\n')
 }
 
 function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
@@ -69,7 +67,7 @@ function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
     '',
   )
   if (failures.length) {
-    lines.push('### Failures', '', failureTable(failures), '', failureDetails(failures), '')
+    lines.push('### Failures', '', failureList(failures), '')
   }
   if (xpasses.length) {
     lines.push(
@@ -95,4 +93,4 @@ function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
   return lines.join('\n')
 }
 
-module.exports = { counts, consoleLine, toMarkdown, failureTable, failureDetails, pageUrl, sourceUrl, LANG_NAMES }
+module.exports = { counts, consoleLine, toMarkdown, failureList, pageUrl, sourceUrl, LANG_NAMES }

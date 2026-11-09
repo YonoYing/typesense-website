@@ -6,7 +6,7 @@
 // There is one issue per release line (e.g. "31.0"), updated in place as new
 // release candidates come out, and closed once every example passes.
 
-const { counts, failureTable, failureDetails } = require('./report')
+const { counts, failureList } = require('./report')
 
 const LABEL = 'docs-examples'
 
@@ -22,13 +22,11 @@ function issueBody({ report, tag, docsVersion, runUrl }) {
     '',
     `**${failures.length} example run(s) failed.** ${c.pass} passed, ${c.xfail} were already known to fail, ${c.skip} were skipped.`,
     '',
-    'Each failure below links to the example on the site and in the source. Fix the example (or its test in `snippet-tests/tests/`), and this issue closes automatically once everything passes.',
+    'Each failure below shows the error and links to the example on the site and in the source. Fix the example (or its test in `snippet-tests/tests/`), and this issue closes automatically once everything passes.',
     '',
-    failureTable(failures),
+    '### Failures',
     '',
-    '### Errors',
-    '',
-    failureDetails(failures),
+    failureList(failures),
     '',
     '---',
     `Last checked ${new Date().toISOString().slice(0, 10)}${runUrl ? ` in [this workflow run](${runUrl})` : ''}.`,
