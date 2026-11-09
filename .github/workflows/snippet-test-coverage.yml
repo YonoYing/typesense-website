@@ -1,0 +1,135 @@
+# Makes sure every code example a pull request adds has a finished test.
+#
+# For each new example without a test, this writes a guessed test stub marked
+# `todo` and adds a checkbox to the PR description. The check fails until
+# every box is ticked and no test is still marked `todo`. Ticking a box
+# re-runs the check.
+#
+# Security: this uses pull_request_target so it can edit PRs from forks. It
+# only runs scripts from the base branch; the PR's files are read and parsed
+# as data, never executed.
+#
+# Stubs are committed to the PR branch only when the PR comes from this repo
+# and the SNIPPET_TESTS_PUSH_TOKEN secret is set (a fine-grained token or app
+# token with contents: write). A token is needed because commits pushed with
+# the default GITHUB_TOKEN do not trigger the PR's other checks. Otherwise the
+# stubs are posted in a PR comment, ready to paste.
+name: Snippet test coverage
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: snippet-test-coverage-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out base branch (trusted scripts)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - name: Check out PR (data only)
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install harness dependencies (from base branch)
+        working-directory: base/snippet-tests
+        run: npm ci --ignore-scripts
+
+      - name: Decide where stubs go
+        id: mode
+        env:
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          HAS_TOKEN: ${{ secrets.SNIPPET_TESTS_PUSH_TOKEN != '' }}
+        run: |
+          if [ "$SAME_REPO" = "true" ] && [ "$HAS_TOKEN" = "true" ]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find new examples and check their tests
+        run: >
+          node base/snippet-tests/bin/coverage.js
+          --base base --head head
+          ${{ steps.mode.outputs.push == 'true' && '--write-stubs' || '' }}
+          --out coverage.json
+
+      - name: Commit test stubs to the PR branch
+        if: steps.mode.outputs.push == 'true'
+        working-directory: head
+        env:
+          PUSH_TOKEN: ${{ secrets.SNIPPET_TESTS_PUSH_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$(git status --porcelain -- snippet-tests/tests)" ]; then
+            echo "No stubs to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add snippet-tests/tests
+          git commit -m "Add test stubs for new docs code examples"
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${REPO}.git" "HEAD:${HEAD_REF}"
+
+      - name: Update PR checklist
+        uses: actions/github-script@v8
+        env:
+          STUBS_IN_COMMENT: ${{ steps.mode.outputs.push != 'true' }}
+        with:
+          script: |
+            const fs = require('fs')
+            const { updateBody, stubComment } = require(`${process.env.GITHUB_WORKSPACE}/base/snippet-tests/lib/checklist.js`)
+            const coverage = JSON.parse(fs.readFileSync('coverage.json', 'utf8'))
+            const { owner, repo } = context.repo
+            const pull_number = context.payload.pull_request.number
+
+            // Re-read the description: the event payload can be stale.
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number })
+            const stubsInComment = process.env.STUBS_IN_COMMENT === 'true'
+            const result = updateBody(pr.body, coverage, { stubsInComment })
+            if (result.changed) {
+              await github.rest.pulls.update({ owner, repo, pull_number, body: result.body })
+            }
+
+            // Keep one bot comment with stubs for examples that have no test yet.
+            const marker = '<!-- snippet-tests:stubs -->'
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: pull_number, per_page: 100 })
+            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker))
+            const body = stubsInComment ? stubComment(coverage) : null
+            if (body && existing) {
+              if (existing.body !== body) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
+            } else if (body) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: pull_number, body })
+            } else if (existing) {
+              await github.rest.issues.deleteComment({ owner, repo, comment_id: existing.id })
+            }
+
+            if (result.blocking.length) {
+              core.summary.addHeading('Snippet tests still needed', 3).addList(result.blocking)
+              await core.summary.write()
+              core.setFailed(`${result.blocking.length} new code example(s) still need a finished test. See the checklist in the PR description.`)
+            } else {
+              core.info(result.items.length ? 'Every new code example has a finished test.' : 'No new code examples.')
+            }

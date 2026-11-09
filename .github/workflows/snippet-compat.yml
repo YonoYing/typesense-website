@@ -1,0 +1,122 @@
+# Checks the latest docs' code examples against the newest Typesense server
+# image on Docker Hub (release candidates included), so breaking changes show
+# up before a release ships.
+#
+# Failures are reported in one GitHub issue per release line (e.g. 31.0),
+# updated as new release candidates appear and closed once everything passes.
+#
+# A run is skipped when the same image tag was already tested against the same
+# docs and tests, so the daily schedule only does work when something changed.
+name: Snippet compatibility with new Typesense releases
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to test (default: newest on Docker Hub)'
+        required: false
+      force:
+        description: 'Run even if this tag was already tested'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: snippet-compat
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: snippet-tests/package-lock.json
+
+      - name: Install harness
+        working-directory: snippet-tests
+        run: npm ci
+
+      # Tools some shell examples use.
+      - name: Install example dependencies
+        run: sudo apt-get install -y --no-install-recommends parallel
+
+      - name: Find image tag and docs version
+        id: target
+        working-directory: snippet-tests
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+            echo "line=$(echo "$INPUT_TAG" | sed -E 's/\.rc[0-9]+$//' | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
+          else
+            node bin/latest-tag.js --github
+          fi
+          echo "docs=$(node -p "require('../typesenseVersions.json').typesenseLatestVersion")" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this was already tested
+        id: seen
+        uses: actions/cache/restore@v4
+        with:
+          path: .snippet-compat-tested
+          key: snippet-compat-${{ steps.target.outputs.tag }}-${{ hashFiles(format('docs-site/content/{0}/**', steps.target.outputs.docs), 'snippet-tests/**') }}
+          lookup-only: true
+
+      - name: Run docs examples against the new image
+        id: run
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force
+        working-directory: snippet-tests
+        continue-on-error: true
+        run: >
+          node bin/run.js "${{ steps.target.outputs.docs }}"
+          --image "typesense/typesense:${{ steps.target.outputs.tag }}"
+          --report ../report.json
+          --title "Docs examples vs typesense/typesense:${{ steps.target.outputs.tag }}"
+          --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: File, update or close the issue
+        if: steps.run.outcome != 'skipped'
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+          LINE: ${{ steps.target.outputs.line }}
+          DOCS_VERSION: ${{ steps.target.outputs.docs }}
+        with:
+          script: |
+            const fs = require('fs')
+            const { fileIssue } = require(`${process.env.GITHUB_WORKSPACE}/snippet-tests/lib/issue.js`)
+            if (!fs.existsSync('report.json')) {
+              core.setFailed('The test run did not produce a report; see the previous step.')
+              return
+            }
+            const report = JSON.parse(fs.readFileSync('report.json', 'utf8'))
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const outcome = await fileIssue({
+              github, context, report,
+              tag: process.env.TAG,
+              line: process.env.LINE,
+              docsVersion: process.env.DOCS_VERSION,
+              runUrl,
+            })
+            core.info(`Issue: ${outcome.action}${outcome.number ? ` #${outcome.number}` : ''}`)
+
+      - name: Remember this tag was tested
+        if: steps.run.outcome != 'skipped' && hashFiles('report.json') != ''
+        run: echo "${{ steps.target.outputs.tag }}" > .snippet-compat-tested
+
+      - uses: actions/cache/save@v4
+        if: steps.run.outcome != 'skipped' && hashFiles('report.json') != ''
+        with:
+          path: .snippet-compat-tested
+          key: snippet-compat-${{ steps.target.outputs.tag }}-${{ hashFiles(format('docs-site/content/{0}/**', steps.target.outputs.docs), 'snippet-tests/**') }}

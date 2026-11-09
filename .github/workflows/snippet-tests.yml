@@ -1,0 +1,66 @@
+# Runs the docs code examples that a pull request touches against a real
+# Typesense server. A docs page is tested when its markdown or its test file
+# changes; a change to the test harness re-runs every covered page.
+name: Snippet tests
+
+on:
+  pull_request:
+    paths:
+      - 'docs-site/content/**'
+      - 'snippet-tests/**'
+      - '.github/workflows/snippet-tests.yml'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Docs version or page to test, e.g. 30.2 or 30.2/api/documents.md'
+        required: true
+        default: '30.2'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snippet-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: snippet-tests
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: snippet-tests/package-lock.json
+
+      - run: npm ci
+
+      - name: Test the harness itself
+        run: npm run self-test
+
+      # Tools some shell examples use.
+      - name: Install example dependencies
+        run: sudo apt-get install -y --no-install-recommends parallel
+
+      - name: Test changed examples
+        if: github.event_name == 'pull_request'
+        run: >
+          node bin/run.js
+          --changed "origin/${{ github.base_ref }}"
+          --title "Docs snippet tests"
+          --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Test requested examples
+        if: github.event_name == 'workflow_dispatch'
+        run: >
+          node bin/run.js "${{ inputs.target }}"
+          --title "Docs snippet tests"
+          --summary "$GITHUB_STEP_SUMMARY"

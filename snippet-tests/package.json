@@ -1,0 +1,20 @@
+{
+  "name": "typesense-docs-snippet-tests",
+  "private": true,
+  "description": "Runs the code examples in the Typesense docs against a real Typesense server.",
+  "license": "GPL-3.0",
+  "scripts": {
+    "test": "node bin/run.js",
+    "seed": "node bin/seed.js",
+    "coverage": "node bin/coverage.js",
+    "list": "node bin/list.js",
+    "self-test": "node --test self-test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "acorn": "8.15.0",
+    "typesense": "3.2.0"
+  }
+}
