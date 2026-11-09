@@ -5,8 +5,6 @@
 // run top to bottom against a fresh Typesense server, once per language.
 // See snippet-tests/README.md for everything a test can do.
 
-const MISSING_BACKSLASH = 'Docs bug: the curl command is missing a `\\` line continuation, so it fails when pasted into a shell'
-
 const RULES = {
   product_queries_aggregation: {
     name: 'product_queries_aggregation',
@@ -140,9 +138,6 @@ module.exports = {
       },
     },
     'query-suggestion-ux': {
-      xfail: {
-        shell: 'Docs bug: the second search queries the `products` collection by `q`, a field only the queries collection has (the JavaScript version uses `product_name`)',
-      },
       // Guessed from the curl example: POST /multi_search
       async setup({ createCollection, importDocuments }) {
         await createCollection({
@@ -209,7 +204,6 @@ module.exports = {
       },
     },
     'sending-click-events': {
-      xfail: 'Docs bug: the event is sent to a rule named `products_click_event`, but the rule created above is named `product_clicks`',
       // Guessed from the curl example: POST /analytics/events
       async setup(ctx) {
         await ensureRule(ctx, 'product_clicks')
@@ -273,7 +267,6 @@ module.exports = {
       },
     },
     'remove-a-rule': {
-      xfail: { shell: MISSING_BACKSLASH },
       // Guessed from the JavaScript example: DELETE /analytics/rules/product_queries_aggregation
       async setup(ctx) {
         await ensureRule(ctx, 'product_queries_aggregation')

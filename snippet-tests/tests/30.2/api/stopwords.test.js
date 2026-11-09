@@ -15,7 +15,6 @@ module.exports = {
       },
     },
     'using-stopwords-during-search': {
-      xfail: 'Docs bug: the request body is invalid JSON (missing commas, a trailing comma, and `query_b` instead of `query_by`)',
       // Guessed from the curl example: POST /multi_search
       async verify({ assert, response }) {
         assert.ok(Array.isArray(response.results), 'expected one result per search')

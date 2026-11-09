@@ -5,8 +5,6 @@
 // run top to bottom against a fresh Typesense server, once per language.
 // See snippet-tests/README.md for everything a test can do.
 
-const MISSING_BACKSLASH = 'Docs bug: the curl command is missing a `\\` line continuation, so it fails when pasted into a shell'
-
 // An alias can't share a name with a collection, so drop any "companies"
 // collection left by earlier examples before pointing the alias at the new one.
 async function ensureAlias({ api, dropCollection, ensureCollection }) {
@@ -19,7 +17,6 @@ async function ensureAlias({ api, dropCollection, ensureCollection }) {
 module.exports = {
   snippets: {
     'use-case': {
-      xfail: { shell: 'Docs bug: the search has no `query_by`, so Typesense answers "No search fields specified for the query."' },
       // Guessed from the curl example: POST /multi_search
       async setup({ ensureCollection }) {
         await ensureCollection('companies')
@@ -56,7 +53,6 @@ module.exports = {
       },
     },
     'delete-an-alias': {
-      xfail: { shell: MISSING_BACKSLASH },
       // Guessed from the curl example: DELETE /aliases/companies
       async setup(ctx) {
         await ensureAlias(ctx)

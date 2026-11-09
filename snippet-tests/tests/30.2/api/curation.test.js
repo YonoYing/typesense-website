@@ -5,9 +5,6 @@
 // run top to bottom against a fresh Typesense server, once per language.
 // See snippet-tests/README.md for everything a test can do.
 
-const JS_UPSERT_BUG =
-  'Docs bug: calls client.curationSets().upsert(name, set), but typesense-js expects client.curationSets(name).upsert(set)'
-
 const ITEM = {
   id: 'dynamic-sort-filter',
   rule: { query: 'shoes', match: 'exact' },
@@ -22,14 +19,12 @@ async function ensureCurationSet(api, name = 'curate_products', items = []) {
 module.exports = {
   snippets: {
     'create-or-update-a-curation-set': {
-      xfail: { js: JS_UPSERT_BUG },
       // Guessed from the curl example: PUT /curation_sets/curate_products
       async verify({ expectExists }) {
         await expectExists('/curation_sets/curate_products')
       },
     },
     'including-or-excluding-documents': {
-      xfail: { js: JS_UPSERT_BUG },
       // Guessed from the curl example: PUT /curation_sets/curate_products
       async verify({ response, expectKeys, expectExists }) {
         await expectExists('/curation_sets/curate_products')
@@ -37,24 +32,18 @@ module.exports = {
       },
     },
     'dynamic-filtering': {
-      xfail: { js: JS_UPSERT_BUG },
       // Guessed from the curl example: PUT /curation_sets/curate_products
       async verify({ expectExists }) {
         await expectExists('/curation_sets/curate_products')
       },
     },
     'dynamic-sorting': {
-      xfail: { js: JS_UPSERT_BUG },
       // Guessed from the curl example: PUT /curation_sets/curate_products
       async verify({ expectExists }) {
         await expectExists('/curation_sets/curate_products')
       },
     },
     'dynamic-sorting--2': {
-      xfail: {
-        js: 'Docs bug: calls client.curation_sets(), which does not exist in typesense-js (it is client.curationSets())',
-        shell: 'Docs bug: the server rejects this rule because `match` needs a `query` alongside `filter_by`',
-      },
       // Guessed from the curl example: PUT /curation_sets/curate_products
       async verify({ expectExists }) {
         await expectExists('/curation_sets/curate_products')
@@ -100,7 +89,6 @@ module.exports = {
       },
     },
     'upsert-a-curation-set-item': {
-      xfail: 'Docs bug: the server rejects this rule because `match` needs a `query` alongside `filter_by`',
       // Guessed from the curl example: PUT /curation_sets/curate_products/items/dynamic-sort-filter
       async setup({ api }) {
         await ensureCurationSet(api)

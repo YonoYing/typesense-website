@@ -68,9 +68,6 @@ module.exports = {
       },
     },
     'upsert-a-synonym-set-item': {
-      xfail: {
-        js: "Docs bug: calls client.synonymSets(set).items(id).upsert(item), but typesense-js expects client.synonymSets(set).items().upsert(id, item)",
-      },
       // Guessed from the curl example: PUT /synonym_sets/tech-synonyms/items/smart-phone-synonyms
       async verify({ expectExists }) {
         await expectExists('/synonym_sets/tech-synonyms/items/smart-phone-synonyms')

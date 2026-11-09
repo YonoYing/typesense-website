@@ -32,7 +32,6 @@ async function ensurePlaces({ api, createCollection, importDocuments }) {
 module.exports = {
   snippets: {
     'geosearch': {
-      xfail: { shell: 'Docs bug: the curl command is missing a `\\` after `-X POST`, so it fails when pasted into a shell' },
       async setup({ dropCollection }) {
         await dropCollection('places')
       },
@@ -52,7 +51,6 @@ module.exports = {
       },
     },
     'searching-within-a-radius': {
-      xfail: { js: 'Docs bug: searches the `companies` collection instead of `places`' },
       async setup(ctx) {
         await ensurePlaces(ctx)
       },
@@ -95,9 +93,6 @@ module.exports = {
       },
     },
     'searching-points-in-polygons': {
-      xfail: {
-        shell: 'Docs bug: the URL breaks across lines with leading spaces and has an unencoded space in `area:(0.5, 0.5)`, so curl rejects it',
-      },
       async verify({ assert, response }) {
         assert.ok(Array.isArray(response.hits), 'expected search hits')
         assert.equal(response.found, 1)

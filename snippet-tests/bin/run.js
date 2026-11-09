@@ -11,6 +11,7 @@
 //   --image <image>      server image (default: typesense/typesense:<docs version>)
 //   --langs js,shell     languages to run (default: all executable languages)
 //   --only id1,id2       only these snippet IDs
+//   --no-static          skip the static checks (syntax, client API, cross-tab)
 //   --report <file>      write results as JSON
 //   --summary <file>     append a Markdown summary (e.g. $GITHUB_STEP_SUMMARY)
 //   --title <text>       heading for the Markdown summary
@@ -35,6 +36,7 @@ function parseArgs(argv) {
     else if (a === '--summary') opts.summary = next()
     else if (a === '--title') opts.title = next()
     else if (a === '--changed') opts.changed = next()
+    else if (a === '--no-static') opts.static = false
     else if (a === '--help' || a === '-h') opts.help = true
     else opts.targets.push(a)
   }
@@ -44,7 +46,7 @@ function parseArgs(argv) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
   if (opts.help) {
-    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(3, 18).join('\n').replace(/^\/\/ ?/gm, ''))
+    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(3, 19).join('\n').replace(/^\/\/ ?/gm, ''))
     return
   }
 
@@ -71,6 +73,7 @@ async function main() {
         image: opts.image,
         langs,
         only: opts.only,
+        static: opts.static !== false,
         log: r => console.log(consoleLine(r)),
       })
       results.push(...pageResults)
@@ -80,7 +83,10 @@ async function main() {
   }
 
   const c = counts(results)
-  console.log(`\n${c.pass} passed, ${c.fail} failed, ${c.xfail} known failures, ${c.xpass} unexpected passes, ${c.skip} skipped`)
+  console.log(
+    `\n${c.pass} passed, ${c.fail} failed, ${c.xfail} known failures, ${c.xpass} unexpected passes, ${c.skip} skipped` +
+      (c.staticOnly ? ` (${c.staticOnly} passes are static checks only)` : ''),
+  )
 
   const image = opts.image || images.join(', ')
   if (opts.report) fs.writeFileSync(opts.report, JSON.stringify({ image, results }, null, 2))

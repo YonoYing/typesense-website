@@ -132,6 +132,7 @@ function extractFromMarkdown(markdown) {
           lang: fence.lang,
           tab: fence.tab,
           line: fence.line,
+          endLine: lineNo,
           code: fence.body.join('\n'),
         }
         if (tabs) {

@@ -1,6 +1,7 @@
 # Checks the latest docs' code examples against the newest Typesense server
 # image on Docker Hub (release candidates included), so breaking changes show
-# up before a release ships.
+# up before a release ships. Runs without the static checks: those report docs
+# bugs that do not depend on the server, and belong to the PR checks.
 #
 # Failures are reported in one GitHub issue per release line (e.g. 31.0),
 # updated as new release candidates appear and closed once everything passes.
@@ -84,6 +85,7 @@ jobs:
         run: >
           node bin/run.js "${{ steps.target.outputs.docs }}"
           --image "typesense/typesense:${{ steps.target.outputs.tag }}"
+          --no-static
           --report ../report.json
           --title "Docs examples vs typesense/typesense:${{ steps.target.outputs.tag }}"
           --summary "$GITHUB_STEP_SUMMARY"

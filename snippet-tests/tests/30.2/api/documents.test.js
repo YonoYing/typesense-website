@@ -42,9 +42,6 @@ module.exports = {
       },
     },
     'returning-the-id-of-the-imported-documents': {
-      xfail: {
-        shell: "Docs bug: the example's output is inside the code block, so pasting it runs `{\"success\": true, ...}` as shell commands",
-      },
       // Guessed from the curl example: POST /collections/companies/documents/import?return_id
       async setup({ fixtures, ensureCollection, writeFile, toJsonl }) {
         await ensureCollection('companies')
@@ -102,7 +99,6 @@ module.exports = {
       // No API call recognised. The example only has to run without errors.
     },
     'retrieve-a-document': {
-      xfail: { shell: 'Docs bug: the command starts with a `$ ` prompt, which fails when pasted into a shell' },
       // Guessed from the JavaScript example: GET /collections/companies/documents/124
       async setup({ ensureDocument }) {
         await ensureDocument('companies', '124')

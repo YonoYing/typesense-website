@@ -5,14 +5,18 @@
 const SITE = 'https://typesense.org/docs'
 const REPO_BLOB = 'https://github.com/typesense/typesense-website/blob/master/docs-site/content'
 
-const LANG_NAMES = { js: 'JavaScript', shell: 'curl' }
+const LANG_NAMES = {
+  js: 'JavaScript', ts: 'TypeScript', shell: 'curl', python: 'Python', ruby: 'Ruby', php: 'PHP', dart: 'Dart',
+  java: 'Java', go: 'Go', swift: 'Swift', csharp: 'C#', rust: 'Rust',
+}
 
 function counts(results) {
-  const c = { pass: 0, fail: 0, skip: 0, xfail: 0, xpass: 0, untested: 0, todo: 0 }
+  const c = { pass: 0, fail: 0, skip: 0, xfail: 0, xpass: 0, untested: 0, todo: 0, staticOnly: 0 }
   for (const r of results) {
     c[r.status] = (c[r.status] || 0) + 1
     if (r.untested) c.untested++
     if (r.todo) c.todo++
+    if (r.check === 'static' && r.status === 'pass') c.staticOnly++
   }
   return c
 }
@@ -27,9 +31,9 @@ function sourceUrl(r) {
 
 function consoleLine(r) {
   const icon = { pass: 'PASS ', fail: 'FAIL ', skip: 'skip ', xfail: 'xfail', xpass: 'XPASS' }[r.status]
-  const flags = [r.untested && 'no test', r.todo && 'todo'].filter(Boolean)
-  const detail = r.status === 'fail' ? `\n        ${r.error}` : r.reason ? ` (${r.reason})` : ''
-  return `  ${icon} ${r.lang.padEnd(5)} ${r.page} › ${r.id}${flags.length ? ` [${flags.join(', ')}]` : ''}${detail}`
+  const flags = [r.check === 'static' && 'static', r.untested && 'no test', r.todo && 'todo'].filter(Boolean)
+  const detail = r.status === 'fail' ? `\n        ${String(r.error).replace(/\n/g, '\n        ')}` : r.reason ? ` (${r.reason})` : ''
+  return `  ${icon} ${r.lang.padEnd(6)} ${r.page} › ${r.id}${flags.length ? ` [${flags.join(', ')}]` : ''}${detail}`
 }
 
 function truncate(text, max = 600) {
@@ -63,7 +67,8 @@ function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
   const lines = [`## ${title}`, '']
   if (image) lines.push(`Server image: \`${image}\``, '')
   lines.push(
-    `**${c.pass} passed**, **${c.fail} failed**, ${c.xfail} known failures, ${c.skip} skipped.`,
+    `**${c.pass} passed**, **${c.fail} failed**, ${c.xfail} known failures, ${c.skip} skipped.` +
+      (c.staticOnly ? ` ${c.staticOnly} of the passes are static checks only (languages without an executor).` : ''),
     '',
   )
   if (failures.length) {
@@ -84,7 +89,7 @@ function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
     lines.push(
       '### Examples without a test',
       '',
-      'These ran with the default check only (no errors, HTTP 2xx).',
+      'These ran with the default checks only (no errors, HTTP 2xx, and the static checks).',
       '',
       ...ids.map(id => `- \`${id}\``),
       '',

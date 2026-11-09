@@ -33,7 +33,6 @@ module.exports = {
 
   snippets: {
     'one-to-one-relation': {
-      xfail: 'Docs bug: the search has no `query_by`, so Typesense answers "No search fields specified for the query."',
       // Guessed from the curl example: POST /multi_search
       async verify({ assert, response }) {
         const hit = response.results[0].hits[0]

@@ -9,7 +9,10 @@ module.exports = {
   snippets: {
     'libraries': {
       skip: 'installation instructions, not runnable code',
-      // No API call recognised. The example only has to run without errors.
+      // These tabs hold shell install commands (pip, composer) or an HTML
+      // script tag, not code in the tab's language, so the syntax checks do
+      // not apply. The Java and Swift tabs show real imports and are checked.
+      static: { js: false, python: false, php: false, ruby: false, dart: false, go: false },
     },
   },
 }

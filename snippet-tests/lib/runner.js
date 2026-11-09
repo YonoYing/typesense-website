@@ -5,15 +5,22 @@
 // Pages are run top to bottom against a fresh server because docs examples
 // build on each other (create a collection, index into it, search it). A test
 // entry can add setup() to make an example independent of earlier ones.
+//
+// Every client-language block on the page is also checked statically
+// (lib/static): syntax, calls the client library does not have, tabs that
+// disagree with their siblings. Languages without an executor get a result
+// from the static checks alone; executable languages get both, and a static
+// problem fails the example even when it happened to run.
 
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const { DOCS_ROOT, TESTS_ROOT, EXECUTABLE_LANGUAGES } = require('./config')
-const { extractFromFile } = require('./extract')
+const { extractFromFile, CLIENT_LANGUAGES } = require('./extract')
 const { loadTests, testFileFor } = require('./test-file')
 const { createApi, createHelpers } = require('./helpers')
 const { startServer } = require('./server')
+const staticChecks = require('./static')
 const fixtures = require('./fixtures')
 const executors = {
   js: require('./executors/js'),
@@ -27,15 +34,26 @@ function forLang(value, lang) {
   return value
 }
 
+// `static: false` or `static: { python: false }` turns the static checks off
+// for an example (an install command in a code block, a deliberate fragment).
+function staticDisabled(entry, lang) {
+  if (!entry || entry.static === undefined) return false
+  if (entry.static === false) return true
+  return typeof entry.static === 'object' && entry.static[lang] === false
+}
+
 function latestVersion() {
   const versions = require(path.join(DOCS_ROOT, '..', '..', 'typesenseVersions.json'))
   return versions.typesenseLatestVersion
 }
 
-function defaultImageFor(docRel) {
+function docsVersionOf(docRel) {
   const first = docRel.split('/')[0]
-  const version = /^\d/.test(first) ? first : latestVersion()
-  return `typesense/typesense:${version}`
+  return /^\d/.test(first) ? first : latestVersion()
+}
+
+function defaultImageFor(docRel) {
+  return `typesense/typesense:${docsVersionOf(docRel)}`
 }
 
 function errorText(err) {
@@ -125,7 +143,31 @@ async function runGroup({ group, entry, lang, baseCtx }) {
   return failure ? { ...result, status: 'fail', error: failure, durationMs } : { ...result, status: 'pass', durationMs }
 }
 
-async function runPage({ docRel, image, langs = EXECUTABLE_LANGUAGES, only, log = () => {}, docsRoot = DOCS_ROOT, testsRoot = TESTS_ROOT }) {
+// Folds the static problems of a block into its runtime result. A static
+// problem is a failure even when the example ran: the sibling tabs, or the
+// client library's real API, say the example is wrong.
+function withStatic(result, problems, entry, lang) {
+  if (!problems || !problems.length) return result
+  const text = staticChecks.formatProblems(problems)
+  const error = result.error ? `${result.error}\n${text}` : text
+  const xfail = entry && forLang(entry.xfail, lang)
+  if (result.status === 'skip' || result.status === 'pass' || result.status === 'xpass') {
+    const status = xfail ? 'xfail' : 'fail'
+    return { ...result, status, error, check: 'static', reason: xfail || undefined }
+  }
+  return { ...result, error, check: result.status === 'xfail' ? 'static' : 'runtime+static' }
+}
+
+async function runPage({
+  docRel,
+  image,
+  langs = EXECUTABLE_LANGUAGES,
+  only,
+  log = () => {},
+  docsRoot = DOCS_ROOT,
+  testsRoot = TESTS_ROOT,
+  static: runStatic = true,
+}) {
   const docFile = path.join(docsRoot, docRel)
   const groups = extractFromFile(docFile).filter(g => !only || only.includes(g.id))
   const testFile = testFileFor(docRel, testsRoot)
@@ -139,7 +181,33 @@ async function runPage({ docRel, image, langs = EXECUTABLE_LANGUAGES, only, log 
     return results
   }
 
+  const staticProblems = runStatic ? staticChecks.checkPage(groups, { version: docsVersionOf(docRel) }) : new Map()
+  const problemsFor = (group, lang) => {
+    const entry = tests.snippets[group.id]
+    if (staticDisabled(entry, lang)) return []
+    return staticProblems.get(`${group.id}|${lang}`) || []
+  }
+
+  // Languages without an executor (or not selected to run): static only.
+  const executed = new Set(langs.filter(l => executors[l]))
+  for (const group of groups) {
+    for (const block of group.blocks) {
+      if (!CLIENT_LANGUAGES.has(block.lang) || executed.has(block.lang)) continue
+      const entry = tests.snippets[group.id]
+      const problems = problemsFor(group, block.lang)
+      const xfail = entry && forLang(entry.xfail, block.lang)
+      let r = { id: group.id, line: block.line, heading: group.heading.title, lang: block.lang, check: 'static' }
+      if (!problems.length) r = { ...r, status: 'pass' }
+      else if (xfail) r = { ...r, status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems) }
+      else r = { ...r, status: 'fail', error: staticChecks.formatProblems(problems) }
+      r = { ...base, ...r, untested: !entry, todo: !!(entry && entry.todo) }
+      results.push(r)
+      log(r)
+    }
+  }
+
   for (const lang of langs) {
+    if (!executors[lang]) continue
     const runnable = groups.filter(g => g.blocks.some(b => b.lang === lang))
     if (runnable.length === 0) continue
 
@@ -170,6 +238,7 @@ async function runPage({ docRel, image, langs = EXECUTABLE_LANGUAGES, only, log 
       } else {
         r = await runGroup({ group, entry, lang, baseCtx })
       }
+      r = withStatic(r, problemsFor(group, lang), entry, lang)
       r = { ...base, ...r, lang, untested: !entry, todo: !!(entry && entry.todo) }
       results.push(r)
       log(r)
@@ -179,4 +248,4 @@ async function runPage({ docRel, image, langs = EXECUTABLE_LANGUAGES, only, log 
   return results
 }
 
-module.exports = { runPage, defaultImageFor, latestVersion, embeddedError }
+module.exports = { runPage, defaultImageFor, latestVersion, embeddedError, withStatic }

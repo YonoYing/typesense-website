@@ -8,6 +8,7 @@
     "seed": "node bin/seed.js",
     "coverage": "node bin/coverage.js",
     "list": "node bin/list.js",
+    "audit": "node bin/audit.js",
     "self-test": "node --test self-test/*.test.js"
   },
   "engines": {

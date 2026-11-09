@@ -80,7 +80,6 @@ module.exports = {
       },
     },
     'schema-prompt-cache': {
-      xfail: 'Docs bug: uses --data-urlencode without -G, so curl sends a POST that the search endpoint answers with 404; it also reads ${API_KEY} instead of ${TYPESENSE_API_KEY}',
       // Guessed from the curl example: POST /collections/products/documents/search
       async setup({ ensureCollection }) {
         await ensureCollection('products')

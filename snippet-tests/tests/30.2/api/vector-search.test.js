@@ -9,9 +9,6 @@
 // no API keys for them. The built-in models (ts/...) are downloaded by the
 // server on first use, so those examples need network access.
 
-const JS_CREATE_BUG =
-  "Docs bug: calls client.collections('products').create(schema), but typesense-js creates collections with client.collections().create(schema)"
-
 // The "products" collection most search examples use: product names with an
 // auto-embedding field from a built-in model.
 const PRODUCTS = {
@@ -87,7 +84,6 @@ module.exports = {
       },
     },
     'creating-an-auto-embedding-field': {
-      xfail: { js: JS_CREATE_BUG },
       timeout: 300000, // first use downloads the model
       // Guessed from the curl example: POST /collections
       async setup({ dropCollection }) {
@@ -101,7 +97,6 @@ module.exports = {
       },
     },
     'using-built-in-models': {
-      xfail: { js: JS_CREATE_BUG },
       timeout: 300000, // first use downloads the model
       // Guessed from the curl example: POST /collections
       async setup({ dropCollection }) {
@@ -116,38 +111,31 @@ module.exports = {
     },
     'using-openai-api': {
       skip: { shell: 'needs an OpenAI API key' },
-      xfail: { js: JS_CREATE_BUG },
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'using-azure-openai-api': {
-      xfail: { js: `${JS_CREATE_BUG} (it also needs an Azure OpenAI key)` },
     },
     'using-openai-compatible-apis': {
       skip: { shell: 'needs an OpenAI-compatible API endpoint and key' },
-      xfail: { js: JS_CREATE_BUG },
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'using-google-palm-api': {
       skip: { shell: 'needs a Google API key' },
-      xfail: { js: JS_CREATE_BUG },
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'updating-remote-model-api-key': {
-      xfail:
-        'Possible docs bug: the server rejects this field definition ("Wrong format for `fields`"), probably because `type` is missing. Updating a real key would also need an OpenAI API key.',
       async setup(ctx) {
         await ensureProducts(ctx)
       },
     },
     'oauth-authentication': {
       skip: { shell: 'needs Google OAuth credentials' },
-      xfail: { js: JS_CREATE_BUG },
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
@@ -177,14 +165,12 @@ module.exports = {
     },
     'model-config-file': {
       skip: { shell: 'needs custom model files on the server' },
-      xfail: { js: JS_CREATE_BUG },
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'indexing-prefix-and-query-prefix': {
       skip: { shell: 'needs custom model files on the server' },
-      xfail: { js: JS_CREATE_BUG },
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
@@ -232,7 +218,6 @@ module.exports = {
       },
     },
     'hybrid-search': {
-      xfail: { shell: 'Docs bug: the search has no `collection`, so Typesense answers "Collection not found"' },
       // Guessed from the curl example: POST /multi_search
       async setup(ctx) {
         await ensureProducts(ctx)
@@ -244,7 +229,6 @@ module.exports = {
       },
     },
     'hybrid-search--2': {
-      xfail: { shell: 'Docs bug: the search has no `collection`, so Typesense answers "Collection not found"' },
       // Guessed from the curl example: POST /multi_search
       async setup(ctx) {
         await ensureProducts(ctx)

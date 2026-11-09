@@ -22,10 +22,6 @@ module.exports = {
       // No API call recognised. The example only has to run without errors.
     },
     'facet-referencing--2': {
-      xfail: {
-        shell:
-          'Docs bug: no space between the -H header and the URL, so curl sees no URL; `$Customers` inside double quotes is also expanded by the shell',
-      },
       // No API call recognised. The example only has to run without errors.
     },
     'sorting-null-empty-or-missing-values': {
@@ -35,7 +31,6 @@ module.exports = {
       // No API call recognised. The example only has to run without errors.
     },
     'example': {
-      xfail: { shell: 'Docs bug: the URL has unencoded spaces in the sort_by value, so curl rejects it' },
       // Guessed from the curl example: GET /collections/products/documents/search?q&query_by&sort_by
       async setup({ ensureCollection }) {
         await ensureCollection('products')
@@ -74,8 +69,6 @@ module.exports = {
       },
     },
     'presets--2': {
-      xfail:
-        'Docs bug: the preset above uses `"sort_by": "popularity"` with no `:asc`/`:desc`, so searches using it fail with "Parameter `sort_by` is malformed."',
       // Guessed from the curl example: POST /multi_search
       async verify({ assert, response }) {
         assert.ok(Array.isArray(response.results), 'expected one result per search')
