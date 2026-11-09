@@ -139,8 +139,40 @@ test('static problems fail an example that ran, unless the test disables them', 
   assert.equal(withStatic(pass, problems, { xfail: 'known' }, 'js').status, 'xfail')
 })
 
-test('the harness flags every BREAK and WRONG example in the audit', { timeout: 300000 }, () => {
+test('docs checks: JSON blocks and prose', () => {
+  const { checkJsonBlock, checkProse } = require('../lib/static/docs')
+  const json = code => checkJsonBlock({ code }, { version: '30.2' }).map(p => p.rule)
+  assert.deepEqual(json('{"a": 1}'), [])
+  assert.ok(json('{"a": 1,}').includes('json-trailing-comma'))
+  assert.ok(json('{\n  ...\n  "a": 1\n}').includes('json-ellipsis'))
+  assert.ok(json('{ fields: [] }').includes('json-unquoted-key'))
+  assert.ok(json('{"hits": [{"document": {"id": 0}}]}').includes('json-numeric-document-id'))
+  assert.ok(json('{"state": 1, "version": "28.0"}').includes('json-version-mismatch'))
+  assert.deepEqual(json('{"GET /collections": 3}'), [])
+  assert.ok(checkJsonBlock({ code: '{"id": "1", ",first_name": "JK"}', jsonl: true }).some(p => p.rule === 'json-mangled-key'))
+  const prose = (text, page = text) => checkProse({ code: text, line: 1 }, page).map(p => p.rule)
+  assert.ok(prose('See [keys](./api-keys.md##generate)').includes('prose-double-hash-link'))
+  assert.ok(prose('1. a\n2. b\n3. c\n3. d').includes('prose-list-numbering'))
+  assert.deepEqual(prose('1. a\n1. b\n1. c'), [])
+  assert.ok(prose('applies the default Porter stemmer', 'Snowball stemmer ... applies the default Porter stemmer').includes('prose-stemmer-name'))
+})
+
+test('stale comments and cosmetic code rules', () => {
+  const r = (lang, code) => rules(checkBlock({ lang, code }))
+  assert.ok(r('python', "cs = {'items': []}\n# Creates an override in the `companies` collection\nclient.curation_sets['curate_products'].upsert(cs)").includes('stale-comment'))
+  assert.ok(!r('python', "# Upserts `curate_products`\nclient.curation_sets['curate_products'].upsert(cs)").includes('stale-comment'))
+  assert.ok(r('swift', 'let c = Company(\n  name: "x",\n)').includes('swift-trailing-comma-arguments'))
+  assert.ok(r('java', 'p.queryBy("product_name,embedding,");').includes('field-list-trailing-comma'))
+  assert.ok(r('shell', 'x=$(echo -n "$a" | base64 -w0)').includes('shell-gnu-base64'))
+  assert.ok(r('shell', 'curl "http://localhost:8108/x" -H "X-TYPESENSE-API-KEY: ${API_KEY}"').includes('shell-api-key-variable'))
+  assert.ok(r('ts', 'await test.multiSearch.perform(r, {})').includes('js-unknown-client-variable'))
+  assert.ok(r('js', '// Browser\n<script src="dist/typesense.min.js"></script>').includes('js-html-in-fence'))
+  assert.ok(r('dart', '//   typesense: ^0.3.0').includes('dart-old-version-constraint'))
+})
+
+test('the harness flags every finding in the audit (BREAK, WRONG and COSMETIC)', { timeout: 300000 }, () => {
   const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'audit.js')], { encoding: 'utf8' })
-  const summary = (res.stdout.split('\n').find(l => /BREAK\/WRONG rows flagged/.test(l)) || '').trim()
+  const summary = (res.stdout.split('\n').find(l => /audit findings flagged/.test(l)) || '').trim()
+  assert.match(summary, /^127 of 127 audit findings flagged/, summary)
   assert.equal(res.status, 0, `${summary}\n${res.stdout.split('\n').filter(l => /^(MISSED|PARTIAL|UNMAPPED)/.test(l)).join('\n')}`)
 })

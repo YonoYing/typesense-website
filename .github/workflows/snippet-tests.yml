@@ -62,6 +62,7 @@ jobs:
         run: >
           node bin/run.js
           --changed "origin/${{ github.base_ref }}"
+          --report ../report.json
           --title "Docs snippet tests"
           --summary "$GITHUB_STEP_SUMMARY"
 
@@ -69,5 +70,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: >
           node bin/run.js "${{ inputs.target }}"
+          --report ../report.json
           --title "Docs snippet tests"
           --summary "$GITHUB_STEP_SUMMARY"
+
+      # Every finding of the example audit (snippet-tests/audit) on the pages
+      # this run tested must be flagged.
+      - name: Cross-check against the example audit
+        if: always() && hashFiles('report.json') != ''
+        run: node bin/audit.js --report ../report.json --summary "$GITHUB_STEP_SUMMARY"

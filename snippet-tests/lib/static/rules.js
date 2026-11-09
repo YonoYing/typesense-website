@@ -52,6 +52,20 @@ const RULES = {
       fix: "client.analytics.rules().retrieve('homepage')",
     },
     {
+      id: 'js-html-in-fence',
+      re: /^\s*<\/?[a-zA-Z][\w-]*(?:\s[^>]*)?>/m,
+      message: 'an HTML tag inside a JavaScript code block is not JavaScript',
+      fix: 'move the <script> tag to an html code block',
+      where: 'raw',
+    },
+    {
+      id: 'js-unknown-client-variable',
+      re: /\b(?!client\b|this\b)([a-z]\w*)\.(?:multiSearch|collections|aliases|keys|analytics|presets|stopwords|curationSets|synonymSets|conversations|nlSearchModels)\b/,
+      message: 'calls the API on a variable this example never declares; the docs name the client `client`',
+      fix: 'client.multiSearch.perform(...)',
+      when: (code, m) => !new RegExp(`\\b(?:let|const|var)\\s+${m[1]}\\b`).test(code),
+    },
+    {
       id: 'js-mixed-module-styles',
       re: /\brequire\(\s*['"]typesense['"]\s*\)[\s\S]*^\s*import\s[\s\S]*\bfrom\s+['"]typesense['"]/m,
       message: 'the block mixes CommonJS require() with an ES module import, so it cannot run as one file',
@@ -211,6 +225,13 @@ const RULES = {
       re: /UpdateSchema\(\s*\{\s*Field\(/,
       message: 'UpdateSchema takes a Set<UpdateField> in typesense-dart 0.6.0 (not Field); the drop flag is shouldDrop: and type is a named parameter',
       fix: "UpdateSchema({UpdateField('num_employees', shouldDrop: true), UpdateField('company_category', type: Type.string)})",
+    },
+    {
+      id: 'dart-old-version-constraint',
+      re: /\btypesense:\s*\^0\.([0-5])\.\d+/,
+      message: 'the pubspec constraint excludes the current typesense-dart release (0.6.0): ^0.x.y only allows versions below 0.(x+1).0',
+      fix: 'typesense: ^0.6.0',
+      where: 'raw',
     },
     {
       id: 'dart-hash-comment',
@@ -410,6 +431,13 @@ const RULES = {
       fix: 'decode a struct with num_deleted, or drop the decode line',
     },
     {
+      id: 'swift-trailing-comma-arguments',
+      re: /,\s*\)/,
+      message: 'a trailing comma in an argument list only compiles on Swift 6.1 and later',
+      fix: 'drop the comma before `)`',
+      where: 'code',
+    },
+    {
       id: 'swift-package-old-version',
       re: /upToNextMajor\(\s*from:\s*"0\.1\.0"\s*\)/,
       message: 'from: "0.1.0" resolves to 0.1.0 ..< 1.0.0, which excludes the current typesense-swift release (1.0.1)',
@@ -418,8 +446,39 @@ const RULES = {
   ],
 }
 
+// TypeScript examples use the same client as JavaScript.
+RULES.ts = RULES.js.filter(r => r.id !== 'js-html-in-fence')
+
+// Rules for curl examples (the shell checks in shell.js cover request shape).
+RULES.shell = [
+  {
+    id: 'shell-gnu-base64',
+    re: /\bbase64\s+-w\s*\d/,
+    message: '`base64 -w0` is a GNU coreutils flag; macOS base64 rejects it',
+    fix: 'base64 | tr -d \'\\n\'  (or openssl base64 -A)',
+    where: 'raw',
+  },
+  {
+    id: 'shell-api-key-variable',
+    re: /X-TYPESENSE-API-KEY:\s*\$\{?(?!TYPESENSE_API_KEY\b)([A-Za-z_]\w*)/i,
+    message: 'reads the API key from a variable every other example calls TYPESENSE_API_KEY',
+    fix: '${TYPESENSE_API_KEY}',
+    where: 'raw',
+  },
+]
+
+// Rules for every client language.
+const COMMON = [
+  {
+    id: 'field-list-trailing-comma',
+    re: /["']((?:[a-z_][\w.]*,)+)["']/,
+    message: 'a comma-separated field list ends with a comma',
+    fix: 'drop the trailing comma',
+  },
+]
+
 function applyRules(code, lang) {
-  const rules = RULES[lang] || []
+  const rules = [...(RULES[lang] || []), ...COMMON]
   if (!rules.length) return []
   const views = {
     source: withoutComments(code, lang),

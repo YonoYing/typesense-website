@@ -7,7 +7,7 @@ const REPO_BLOB = 'https://github.com/typesense/typesense-website/blob/master/do
 
 const LANG_NAMES = {
   js: 'JavaScript', ts: 'TypeScript', shell: 'curl', python: 'Python', ruby: 'Ruby', php: 'PHP', dart: 'Dart',
-  java: 'Java', go: 'Go', swift: 'Swift', csharp: 'C#', rust: 'Rust',
+  java: 'Java', go: 'Go', swift: 'Swift', csharp: 'C#', rust: 'Rust', json: 'JSON', prose: 'text',
 }
 
 function counts(results) {

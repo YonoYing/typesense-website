@@ -48,6 +48,63 @@ function documentedNames(version) {
   return names
 }
 
+// The schemas a page's examples run against: the ones the page's own curl
+// examples create, else the shared `companies` example schema the docs use
+// throughout. Map name -> Set of field names, or null when the schema takes
+// any field (`.*`, `auto`, nested objects). Different pages create different
+// `products` collections, so a schema from another page is never used.
+function pageSchemas(groups) {
+  const schemas = new Map()
+  const record = schema => {
+    if (!schema || typeof schema.name !== 'string' || !Array.isArray(schema.fields)) return
+    const open =
+      schema.enable_nested_fields ||
+      !schema.fields.length ||
+      schema.fields.some(f => !f || /[.*]/.test(f.name) || ['auto', 'object', 'object[]'].includes(f.type))
+    const fields = open ? null : new Set(['id', ...schema.fields.map(f => f.name)])
+    if (!schemas.has(schema.name)) schemas.set(schema.name, fields)
+    else {
+      const prev = schemas.get(schema.name)
+      if (prev && fields) for (const f of fields) prev.add(f)
+      else schemas.set(schema.name, null)
+    }
+  }
+  for (const g of groups) {
+    for (const b of g.blocks) {
+      if (b.lang !== 'shell' || !/\/collections["'?\s]/.test(b.code)) continue
+      for (const body of requestBodies(b.code)) {
+        const parsed = parseJson(body.text)
+        if (parsed.ok) record(parsed.value)
+      }
+    }
+  }
+  if (!schemas.has('companies')) record(require('../fixtures').companies.schema)
+  return schemas
+}
+
+// Field names a block passes in include_fields, query_by, sort_by, facet_by
+// or group_by, in any client's spelling.
+const FIELD_PARAMS = 'include_fields|query_by|sort_by|facet_by|group_by'
+function fieldRefsIn(code, lang) {
+  const values = []
+  for (const m of code.matchAll(new RegExp(`["']?(?:${FIELD_PARAMS})["']?\\s*(?:=>|:)\\s*(?:pointer\\.\\w+\\()?["']([^"'\\n]+)["']`, 'g'))) values.push(m[1])
+  for (const m of code.matchAll(/\.(?:set)?(?:[iI]ncludeFields|[qQ]ueryBy|[sS]ortBy|[fF]acetBy|[gG]roupBy)\(\s*"([^"]+)"/g)) values.push(m[1])
+  for (const m of code.matchAll(/\b(?:IncludeFields|QueryBy|SortBy|FacetBy|GroupBy):\s*pointer\.\w+\(\s*"([^"]+)"/g)) values.push(m[1])
+  if (lang === 'shell') {
+    for (const m of code.matchAll(new RegExp(`[?&](?:${FIELD_PARAMS})=([^&"'\\s\\\\]+)`, 'g'))) values.push(decodeURIComponent(m[1]))
+    for (const m of code.matchAll(new RegExp(`--data-urlencode\\s+["'](?:${FIELD_PARAMS})=([^"']*)["']`, 'g'))) values.push(m[1])
+  }
+  const names = new Set()
+  for (const v of values) {
+    for (let part of v.split(',')) {
+      part = part.trim().replace(/:(asc|desc)$/i, '')
+      if (!part || /^[$_*]|[()\[\]{}<>]|\./.test(part)) continue
+      names.add(part)
+    }
+  }
+  return [...names]
+}
+
 // A snake_case key that is not documented anywhere in this docs version but
 // is one or two edits away from a documented one is a typo the server ignores.
 function misspeltKey(key, documented) {
@@ -227,6 +284,7 @@ function factsFor(block) {
     pairs: pairsIn(code, block.lang),
     embedFrom: embedFromIn(code, block.lang),
     literals: { ids: identifierLiterals(code), all: allLiterals(code) },
+    fieldRefs: fieldRefsIn(code, block.lang),
   }
 }
 
@@ -252,6 +310,7 @@ const SIGNIFICANT_KEYS = new Set([
   'name', 'collection', 'collection_name', 'destination_collection', 'source_collection', 'collections',
   'query_by', 'event_type', 'type', 'model_name', 'doc_id', 'user_id', 'preset', 'rule_tag', 'from', 'facet_by',
   'group_by', 'include_fields', 'exclude_fields', 'vector_query', 'embed', 'locale', 'stopwords', 'curation_tags',
+  'filter_by', 'sort_by',
 ])
 
 function checkGroup(group, pageFacts) {
@@ -261,6 +320,24 @@ function checkGroup(group, pageFacts) {
   const add = (lang, p) => {
     if (!problems.has(lang)) problems.set(lang, [])
     problems.get(lang).push(p)
+  }
+
+  // Fields that the collection's schema (as the docs create it) does not have.
+  if (pageFacts.schemas) {
+    for (const f of facts) {
+      if (f.collections.length !== 1 || !f.fieldRefs.length) continue
+      const schema = pageFacts.schemas.get(f.collections[0])
+      if (!schema) continue
+      const unknown = f.fieldRefs.filter(n => !schema.has(n))
+      if (unknown.length) {
+        const fields = [...schema].filter(n => n !== 'id')
+        add(f.lang, {
+          rule: 'unknown-field',
+          message: `refers to field${unknown.length > 1 ? 's' : ''} \`${unknown.join('`, `')}\`, which the \`${f.collections[0]}\` schema in these docs does not have (fields: ${fields.join(', ')})`,
+          fix: fields.join(','),
+        })
+      }
+    }
   }
 
   // Misspelt parameter names (checked per tab against the documentation).
@@ -383,6 +460,7 @@ const RULE_TYPES = /["']?type["']?\s*(?:=>|:)\s*["'](popular_queries|nohits_quer
 
 function pageFactsFor(groups, version) {
   const documented = version ? documentedNames(version) : null
+  const schemas = pageSchemas(groups)
   const createdCollections = new Set()
   const rules = new Map() // name -> event_type
   const createdResources = [] // { kind, name, line }
@@ -410,7 +488,7 @@ function pageFactsFor(groups, version) {
       }
     }
   }
-  return { createdCollections, rules, createdResources, documented }
+  return { createdCollections, rules, createdResources, documented, schemas }
 }
 
 function checkPage(groups, pageFacts) {

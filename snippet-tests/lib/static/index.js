@@ -20,6 +20,8 @@ const { checkIdentifiers } = require('./identifiers')
 const { checkTerminators } = require('./terminators')
 const { checkShell } = require('./shell')
 const consistency = require('./consistency')
+const docs = require('./docs')
+const { classify } = require('./lexer')
 const { CLIENT_LANGUAGES } = require('../extract')
 
 function dedupe(problems) {
@@ -37,10 +39,12 @@ function checkBlock(block) {
   const { code, lang } = block
   const problems = []
   if (lang === 'shell') {
-    // Shell blocks without curl are parameter fragments or install commands.
-    if (!/\bcurl\b/.test(code)) return []
+    // Shell blocks without curl are parameter fragments, install commands or
+    // helper scripts: only the pattern rules apply, not the curl checks.
+    if (!/\bcurl\b/.test(code)) return dedupe(applyRules(code, lang))
     problems.push(...(tools.checkShellSyntax(code) || []))
     problems.push(...checkShell(code))
+    problems.push(...applyRules(code, lang))
     return dedupe(problems)
   }
   problems.push(...checkBrackets(code, lang))
@@ -52,7 +56,29 @@ function checkBlock(block) {
   problems.push(...applyRules(code, lang))
   problems.push(...checkIdentifiers(code, lang))
   problems.push(...checkTerminators(code, lang))
+  problems.push(...checkComments(code, lang))
   return dedupe(problems)
+}
+
+// A comment that names a resource the code never uses was left behind when
+// the example changed (e.g. "creates an override in the `companies`
+// collection" above code that upserts a curation set).
+function checkComments(code, lang) {
+  const kinds = classify(code, lang)
+  let comments = ''
+  let rest = ''
+  for (let i = 0; i < code.length; i++) {
+    if (kinds[i] === 'comment') comments += code[i]
+    else rest += code[i]
+  }
+  const problems = []
+  for (const m of comments.matchAll(/`([A-Za-z][\w-]{2,})`/g)) {
+    const name = m[1]
+    if (new RegExp(`(^|[^\\w-])${name.replace(/-/g, '\\-')}([^\\w-]|$)`).test(rest)) continue
+    const line = code.slice(0, code.indexOf(m[0])).split('\n').length
+    problems.push({ rule: 'stale-comment', line, message: `the comment mentions \`${name}\`, which the code never uses (left over from an older version of the example)`, fix: 'update the comment to match the code' })
+  }
+  return problems
 }
 
 function checkJsSyntax(code) {
@@ -69,7 +95,9 @@ function checkJsSyntax(code) {
 // Checks every client-language block on a page. Returns a Map keyed by
 // `${group.id}|${lang}` with the problems for that block, including the
 // cross-tab and page-level ones.
-function checkPage(groups, { version } = {}) {
+// `markdown`, when given, adds the JSON blocks and the prose of the page
+// (keys `${id}|json` and `${id}|prose`).
+function checkPage(groups, { version, markdown } = {}) {
   const pageFacts = consistency.pageFactsFor(groups, version)
   const out = new Map()
   const put = (id, lang, problems) => {
@@ -88,6 +116,12 @@ function checkPage(groups, { version } = {}) {
     const [id, lang] = key.split('|')
     put(id, lang, problems)
   }
+  if (markdown) {
+    for (const [key, problems] of docs.checkDocs(markdown, { version }).problems) {
+      const [id, lang] = key.split('|')
+      put(id, lang, problems)
+    }
+  }
   return out
 }
 
@@ -101,4 +135,4 @@ function formatProblems(problems) {
     .join('\n')
 }
 
-module.exports = { checkBlock, checkPage, formatProblems }
+module.exports = { checkBlock, checkPage, checkComments, formatProblems, extractDocItems: docs.extractDocItems }

@@ -1,7 +1,7 @@
 # Checks the latest docs' code examples against the newest Typesense server
 # image on Docker Hub (release candidates included), so breaking changes show
-# up before a release ships. Runs without the static checks: those report docs
-# bugs that do not depend on the server, and belong to the PR checks.
+# up before a release ships. The static checks run too, so the issue lists
+# every broken example, not only the ones the new server rejects.
 #
 # Failures are reported in one GitHub issue per release line (e.g. 31.0),
 # updated as new release candidates appear and closed once everything passes.
@@ -85,10 +85,15 @@ jobs:
         run: >
           node bin/run.js "${{ steps.target.outputs.docs }}"
           --image "typesense/typesense:${{ steps.target.outputs.tag }}"
-          --no-static
           --report ../report.json
           --title "Docs examples vs typesense/typesense:${{ steps.target.outputs.tag }}"
           --summary "$GITHUB_STEP_SUMMARY"
+
+      # Every finding of the example audit (snippet-tests/audit) must be flagged.
+      - name: Cross-check against the example audit
+        if: steps.run.outcome != 'skipped' && hashFiles('report.json') != ''
+        working-directory: snippet-tests
+        run: node bin/audit.js --report ../report.json --summary "$GITHUB_STEP_SUMMARY"
 
       - name: File, update or close the issue
         if: steps.run.outcome != 'skipped'

@@ -181,7 +181,8 @@ async function runPage({
     return results
   }
 
-  const staticProblems = runStatic ? staticChecks.checkPage(groups, { version: docsVersionOf(docRel) }) : new Map()
+  const markdown = fs.readFileSync(docFile, 'utf8')
+  const staticProblems = runStatic ? staticChecks.checkPage(groups, { version: docsVersionOf(docRel), markdown }) : new Map()
   const problemsFor = (group, lang) => {
     const entry = tests.snippets[group.id]
     if (staticDisabled(entry, lang)) return []
@@ -201,6 +202,25 @@ async function runPage({
       else if (xfail) r = { ...r, status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems) }
       else r = { ...r, status: 'fail', error: staticChecks.formatProblems(problems) }
       r = { ...base, ...r, untested: !entry, todo: !!(entry && entry.todo) }
+      results.push(r)
+      log(r)
+    }
+  }
+
+  // JSON blocks (sample responses, bodies, schema fragments) get a result
+  // each; prose sections only when something is wrong with them.
+  if (runStatic) {
+    for (const item of staticChecks.extractDocItems(markdown)) {
+      if (only && !only.includes(item.id)) continue
+      const entry = tests.snippets[item.id]
+      if (staticDisabled(entry, item.lang)) continue
+      const problems = staticProblems.get(`${item.id}|${item.lang}`) || []
+      if (item.kind === 'prose' && !problems.length) continue
+      const xfail = entry && forLang(entry.xfail, item.lang)
+      let r = { ...base, id: item.id, line: item.line, heading: item.heading, lang: item.lang, check: 'static', untested: false, todo: false }
+      if (!problems.length) r.status = 'pass'
+      else if (xfail) Object.assign(r, { status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems) })
+      else Object.assign(r, { status: 'fail', error: staticChecks.formatProblems(problems) })
       results.push(r)
       log(r)
     }
@@ -248,4 +268,4 @@ async function runPage({
   return results
 }
 
-module.exports = { runPage, defaultImageFor, latestVersion, embeddedError, withStatic }
+module.exports = { runPage, defaultImageFor, latestVersion, embeddedError, withStatic, staticDisabled, docsVersionOf }

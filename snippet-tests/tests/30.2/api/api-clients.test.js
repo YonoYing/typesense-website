@@ -9,10 +9,10 @@ module.exports = {
   snippets: {
     'libraries': {
       skip: 'installation instructions, not runnable code',
-      // These tabs hold shell install commands (pip, composer) or an HTML
-      // script tag, not code in the tab's language, so the syntax checks do
-      // not apply. The Java and Swift tabs show real imports and are checked.
-      static: { js: false, python: false, php: false, ruby: false, dart: false, go: false },
+      // The Python, PHP and Ruby tabs hold a single shell install command
+      // (pip, composer, gem), so their language's syntax checks do not apply.
+      // The JavaScript, Dart, Java, Go and Swift tabs show code and are checked.
+      static: { python: false, php: false, ruby: false },
     },
   },
 }

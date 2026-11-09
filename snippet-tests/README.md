@@ -29,7 +29,11 @@ Every client-language block on a page is also checked without running it (`lib/s
 
 Languages without an executor get a result from the static checks alone. For JavaScript and curl the static problems are added to the runtime result, and a static problem fails the example even when it ran, because the sibling tabs or the client's real API say it is wrong.
 
-`audit/` holds an independent review of the 30.2 examples. `node bin/audit.js` maps every example that review found broken to its code block and checks that the harness flags it; the self-test runs it, so a change to the checks cannot silently stop catching a known class of bug. `--extra` lists flagged blocks the review does not mention, to look for false positives.
+Beyond client code, the page itself is checked: every JSON or JSON Lines block (sample responses, request bodies, schema fragments) must be valid JSON with sane keys, document ids that are strings and a version that matches the docs version; prose must not link to a doubled `##` anchor, number a list item twice or contradict itself (a fact table in `lib/static/docs.js`); code comments must not name a resource the code no longer uses; and fields in `include_fields`, `query_by`, `sort_by` and friends must exist in the schema the page creates (or the shared `companies` schema). These results use the languages `json` and `prose`.
+
+`audit/` holds an independent review of the 30.2 examples, and it is the source of truth for what is wrong. `node bin/audit.js` maps every one of its 127 findings (BREAK, WRONG and COSMETIC) to its code block, JSON block or prose section and checks that the harness flags it; the self-test runs it, so a change to the checks cannot silently stop catching a known problem. `--extra` lists flagged blocks the review does not mention, to look for false positives.
+
+The run counts results per example per language, so its failure count is higher than the number of findings: one finding often covers several blocks (C1 is four JavaScript tabs). The audit line is the one to compare with the review.
 
 ## Writing tests
 
@@ -115,7 +119,9 @@ Three workflows in `.github/workflows/` use this harness.
 
 - **Snippet tests** runs on every PR that touches docs or tests. It runs the examples on each changed page, and every covered page when the harness itself changes.
 - **Snippet test coverage** runs on every PR. For each new example without a finished test, it writes a guessed test marked `todo` and adds a checkbox to the PR description. The check fails until every box is ticked and no `todo` is left. It uses `pull_request_target`, so it only takes effect once merged to the default branch.
-- **Snippet compatibility with new Typesense releases** runs daily. It tests the latest docs version against the newest server image on Docker Hub, release candidates included, with `--no-static` since the static checks do not depend on the server. Failures go into one issue per release line, which closes itself once everything passes.
+- **Snippet compatibility with new Typesense releases** runs daily. It tests the latest docs version against the newest server image on Docker Hub, release candidates included. Failures go into one issue per release line, which closes itself once everything passes.
+
+Both test workflows end with the audit cross-check, which adds a line like "127 of 127 audit findings flagged" to the run summary.
 
 By default the coverage check posts stubs in a PR comment, ready to paste. To have them committed to the PR branch instead, add a `SNIPPET_TESTS_PUSH_TOKEN` repository secret. Use a fine-grained token or app token with contents write access. Commits pushed with the default `GITHUB_TOKEN` would not trigger the PR's other checks. Stubs are never pushed to forks.
 
