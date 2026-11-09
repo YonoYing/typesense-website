@@ -59,21 +59,50 @@ function failureList(failures) {
     .join('\n\n')
 }
 
-function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
+// The findings table, in the example audit's format (see lib/findings.js),
+// followed by the per-example counts. `found` is buildFindings()'s result; it
+// is computed here when not given.
+function findingsSection(results, found) {
+  const { buildFindings, findingsTable, headline } = require('./findings')
+  const { findings, undetected, auditFiles } = found || buildFindings(results)
   const c = counts(results)
-  const failures = results.filter(r => r.status === 'fail')
+  const lines = []
+  lines.push(
+    findings.length ? `**${headline(findings)}.**` : '**No findings.**',
+    '',
+    `Per example and language: ${c.fail} failed, ${c.pass} passed, ${c.xfail} known failures, ${c.skip} skipped.` +
+      (c.staticOnly ? ` ${c.staticOnly} of the passes are static checks only (languages without an executor).` : '') +
+      ' One finding often covers several examples, so the two counts differ.',
+    '',
+  )
+  if (findings.length) {
+    lines.push(
+      '### Findings',
+      '',
+      'BREAK: the code throws, fails to compile, or the server rejects it. WRONG: it runs but does the wrong thing. COSMETIC: stale comments, inconsistent values, invalid sample JSON, prose slips.' +
+        (auditFiles.length ? ` Ids are the example audit's (\`snippet-tests/audit/\`); N1, N2... are problems the audit does not list.` : ''),
+      '',
+      findingsTable(findings),
+      '',
+    )
+  }
+  if (undetected.length) {
+    lines.push(
+      '### Audit findings this run did not detect',
+      '',
+      ...undetected.map(u => `- **${u.row.id}** (${u.row.severity}) ${u.row.where} [${u.row.lang}]: ${u.row.problem.replace(/\s+/g, ' ').slice(0, 200)}`),
+      '',
+    )
+  }
+  return lines
+}
+
+function toMarkdown(results, { title = 'Docs snippet tests', image, found } = {}) {
   const xpasses = results.filter(r => r.status === 'xpass')
   const untested = results.filter(r => r.untested)
   const lines = [`## ${title}`, '']
   if (image) lines.push(`Server image: \`${image}\``, '')
-  lines.push(
-    `**${c.pass} passed**, **${c.fail} failed**, ${c.xfail} known failures, ${c.skip} skipped.` +
-      (c.staticOnly ? ` ${c.staticOnly} of the passes are static checks only (languages without an executor).` : ''),
-    '',
-  )
-  if (failures.length) {
-    lines.push('### Failures', '', failureList(failures), '')
-  }
+  lines.push(...findingsSection(results, found))
   if (xpasses.length) {
     lines.push(
       '### Known failures that now pass',
@@ -87,15 +116,17 @@ function toMarkdown(results, { title = 'Docs snippet tests', image } = {}) {
   if (untested.length) {
     const ids = [...new Set(untested.map(r => `${r.page} › ${r.id}`))]
     lines.push(
-      '### Examples without a test',
+      `<details><summary>Examples without a test (${ids.length})</summary>`,
       '',
       'These ran with the default checks only (no errors, HTTP 2xx, and the static checks).',
       '',
       ...ids.map(id => `- \`${id}\``),
+      '',
+      '</details>',
       '',
     )
   }
   return lines.join('\n')
 }
 
-module.exports = { counts, consoleLine, toMarkdown, failureList, pageUrl, sourceUrl, LANG_NAMES }
+module.exports = { counts, consoleLine, toMarkdown, findingsSection, failureList, pageUrl, sourceUrl, LANG_NAMES }

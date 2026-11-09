@@ -147,7 +147,11 @@ async function runGroup({ group, entry, lang, baseCtx }) {
 // problem is a failure even when the example ran: the sibling tabs, or the
 // client library's real API, say the example is wrong.
 function withStatic(result, problems, entry, lang) {
+  // Keep the runtime error apart from the static problems: the report groups
+  // findings by what went wrong.
+  if (result.status === 'fail' || result.status === 'xfail') result = { ...result, runtimeError: result.error }
   if (!problems || !problems.length) return result
+  result = { ...result, problems }
   const text = staticChecks.formatProblems(problems)
   const error = result.error ? `${result.error}\n${text}` : text
   const xfail = entry && forLang(entry.xfail, lang)
@@ -199,8 +203,8 @@ async function runPage({
       const xfail = entry && forLang(entry.xfail, block.lang)
       let r = { id: group.id, line: block.line, heading: group.heading.title, lang: block.lang, check: 'static' }
       if (!problems.length) r = { ...r, status: 'pass' }
-      else if (xfail) r = { ...r, status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems) }
-      else r = { ...r, status: 'fail', error: staticChecks.formatProblems(problems) }
+      else if (xfail) r = { ...r, status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems), problems }
+      else r = { ...r, status: 'fail', error: staticChecks.formatProblems(problems), problems }
       r = { ...base, ...r, untested: !entry, todo: !!(entry && entry.todo) }
       results.push(r)
       log(r)
@@ -219,8 +223,8 @@ async function runPage({
       const xfail = entry && forLang(entry.xfail, item.lang)
       let r = { ...base, id: item.id, line: item.line, heading: item.heading, lang: item.lang, check: 'static', untested: false, todo: false }
       if (!problems.length) r.status = 'pass'
-      else if (xfail) Object.assign(r, { status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems) })
-      else Object.assign(r, { status: 'fail', error: staticChecks.formatProblems(problems) })
+      else if (xfail) Object.assign(r, { status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems), problems })
+      else Object.assign(r, { status: 'fail', error: staticChecks.formatProblems(problems), problems })
       results.push(r)
       log(r)
     }

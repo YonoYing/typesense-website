@@ -6,7 +6,7 @@
 // There is one issue per release line (e.g. "31.0"), updated in place as new
 // release candidates come out, and closed once every example passes.
 
-const { counts, failureList } = require('./report')
+const { findingsSection } = require('./report')
 
 const LABEL = 'docs-examples'
 
@@ -14,24 +14,22 @@ function issueTitle(line) {
   return `Docs code examples failing on Typesense ${line}`
 }
 
+// The issue lists findings in the example audit's table format, like the run
+// summary. GitHub caps an issue body at 65536 characters.
 function issueBody({ report, tag, docsVersion, runUrl }) {
-  const failures = report.results.filter(r => r.status === 'fail')
-  const c = counts(report.results)
   const lines = [
     `The code examples in the **${docsVersion}** docs were run against \`typesense/typesense:${tag}\`.`,
     '',
-    `**${failures.length} example run(s) failed.** ${c.pass} passed, ${c.xfail} were already known to fail, ${c.skip} were skipped.`,
-    '',
-    'Each failure below shows the error and links to the example on the site and in the source. Fix the example (or its test in `snippet-tests/tests/`), and this issue closes automatically once everything passes.',
-    '',
-    '### Failures',
-    '',
-    failureList(failures),
+    ...findingsSection(report.results),
+    'Fix the example (or its test in `snippet-tests/tests/`), and this issue closes automatically once everything passes.',
     '',
     '---',
     `Last checked ${new Date().toISOString().slice(0, 10)}${runUrl ? ` in [this workflow run](${runUrl})` : ''}.`,
   ]
-  return lines.join('\n')
+  const body = lines.join('\n')
+  if (body.length <= 65000) return body
+  const note = `\n\n_The table was cut to fit an issue; the full list is in the [workflow run summary](${runUrl || '#'})._`
+  return body.slice(0, 65000 - note.length).replace(/\n[^\n]*$/, '') + note
 }
 
 // Creates, updates or closes the issue. `github` and `context` are the

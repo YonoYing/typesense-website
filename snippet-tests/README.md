@@ -33,7 +33,16 @@ Beyond client code, the page itself is checked: every JSON or JSON Lines block (
 
 `audit/` holds an independent review of the 30.2 examples, and it is the source of truth for what is wrong. `node bin/audit.js` maps every one of its 127 findings (BREAK, WRONG and COSMETIC) to its code block, JSON block or prose section and checks that the harness flags it; the self-test runs it, so a change to the checks cannot silently stop catching a known problem. `--extra` lists flagged blocks the review does not mention, to look for false positives.
 
-The run counts results per example per language, so its failure count is higher than the number of findings: one finding often covers several blocks (C1 is four JavaScript tabs). The audit line is the one to compare with the review.
+### The report
+
+The final report (console, run summary and the compatibility issue) counts **findings**, in the audit's format: one row per problem, however many tabs or pages it appears in, with the columns `# | Sev | Page | Lang | Snippet | Problem | Fix`. `lib/findings.js` builds it:
+
+- Each audit row the run detects becomes a finding with the audit's id and severity (C1, K1...).
+- A failure on a block no audit row maps to joins an audit finding on the same page that already shows the same problem, as the audit's "and others" does (three more PHP alias statements missing `;` join AL3).
+- Anything left is a new finding, grouped by page and problem and numbered N1, N2... These are problems the audit does not list, most of them found by running the example against the server. Once confirmed, add them to the audit file so the next run reports them under their own id.
+- Audit rows the run did not detect are listed separately and not counted.
+
+Below the table, the per-example counts (one result per example per language) stay for reference; they are higher than the number of findings, because one finding often covers several examples.
 
 ## Writing tests
 

@@ -170,6 +170,28 @@ test('stale comments and cosmetic code rules', () => {
   assert.ok(r('dart', '//   typesense: ^0.3.0').includes('dart-old-version-constraint'))
 })
 
+test('findings group failures the way the audit does', () => {
+  const { buildFindings, findingsTable, headline, runtimeKey } = require('../lib/findings')
+  const fail = (id, lang, extra) => ({ page: '99.9/api/p.md', id, lang, line: 10, status: 'fail', ...extra })
+  const results = [
+    // The same client-API problem in two examples: one finding.
+    fail('a', 'python', { problems: [{ rule: 'py-import-keyword', message: 'm1', line: 1 }] }),
+    fail('b', 'python', { problems: [{ rule: 'py-import-keyword', message: 'm1', line: 1 }] }),
+    // The server rejects the JavaScript and curl versions alike: one finding.
+    fail('c', 'js', { runtimeError: 'HTTP 400: Request failed with HTTP code 400 | Server said: The `match` field requires a `query` field to be present.' }),
+    fail('c', 'shell', { runtimeError: 'HTTP 400: {"message":"The `match` field requires a `query` field to be present."}' }),
+    // A different problem: its own finding.
+    fail('d', 'json', { problems: [{ rule: 'json-trailing-comma', message: 'm2', line: 2 }] }),
+    { page: '99.9/api/p.md', id: 'e', lang: 'js', status: 'pass' },
+  ]
+  const { findings } = buildFindings(results)
+  assert.equal(findings.length, 3)
+  assert.deepEqual(findings.map(f => f.severity).sort(), ['BREAK', 'BREAK', 'COSMETIC'])
+  assert.match(headline(findings), /^3 findings = 2 BREAK, 0 WRONG, 1 COSMETIC/)
+  assert.match(findingsTable(findings), /^\| # \| Sev \| Page \| Lang \| Snippet \| Problem \| Fix \|/)
+  assert.equal(runtimeKey('exited with code 127: /usr/bin/bash: line 5: $: command not found'), '$: command not found')
+})
+
 test('the harness flags every finding in the audit (BREAK, WRONG and COSMETIC)', { timeout: 300000 }, () => {
   const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'audit.js')], { encoding: 'utf8' })
   const summary = (res.stdout.split('\n').find(l => /audit findings flagged/.test(l)) || '').trim()

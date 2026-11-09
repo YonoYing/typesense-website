@@ -21,6 +21,7 @@ const { runPage } = require('../lib/runner')
 const { stopServer, pullImage } = require('../lib/server')
 const { pagesForArgs, pagesForChangedFiles, changedFiles } = require('../lib/pages')
 const { counts, consoleLine, toMarkdown } = require('../lib/report')
+const { buildFindings, consoleFindings, headline } = require('../lib/findings')
 const { EXECUTABLE_LANGUAGES } = require('../lib/config')
 const { defaultImageFor } = require('../lib/runner')
 
@@ -84,13 +85,21 @@ async function main() {
 
   const c = counts(results)
   console.log(
-    `\n${c.pass} passed, ${c.fail} failed, ${c.xfail} known failures, ${c.xpass} unexpected passes, ${c.skip} skipped` +
+    `\nPer example and language: ${c.pass} passed, ${c.fail} failed, ${c.xfail} known failures, ${c.xpass} unexpected passes, ${c.skip} skipped` +
       (c.staticOnly ? ` (${c.staticOnly} passes are static checks only)` : ''),
   )
 
+  // The final report counts findings, the way the example audit does.
+  const found = buildFindings(results)
+  if (found.findings.length) console.log(`\nFindings:\n${consoleFindings(found.findings)}`)
+  for (const u of found.undetected) console.log(`  NOT DETECTED ${u.row.id} (${u.row.severity}) ${u.row.where}`)
+  console.log(`\n${found.findings.length ? headline(found.findings) : 'No findings'}${found.undetected.length ? `; ${found.undetected.length} audit finding(s) not detected` : ''}`)
+
   const image = opts.image || images.join(', ')
-  if (opts.report) fs.writeFileSync(opts.report, JSON.stringify({ image, results }, null, 2))
-  if (opts.summary) fs.appendFileSync(opts.summary, toMarkdown(results, { title: opts.title, image }) + '\n')
+  const findings = found.findings.map(({ id, severity, source, page, langs, snippet, problem, fix, blocks }) => ({ id, severity, source, page, langs, snippet, problem, fix, blocks }))
+  const undetected = found.undetected.map(u => ({ id: u.row.id, severity: u.row.severity, where: u.row.where, lang: u.row.lang, problem: u.row.problem }))
+  if (opts.report) fs.writeFileSync(opts.report, JSON.stringify({ image, findings, undetected, results }, null, 2))
+  if (opts.summary) fs.appendFileSync(opts.summary, toMarkdown(results, { title: opts.title, image, found }) + '\n')
   process.exitCode = c.fail > 0 ? 1 : 0
 }
 

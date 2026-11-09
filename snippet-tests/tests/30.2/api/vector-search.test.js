@@ -130,6 +130,9 @@ module.exports = {
       },
     },
     'updating-remote-model-api-key': {
+      // The example updates the API key of an OpenAI embedding field; creating
+      // that field needs a real OpenAI key, so CI cannot set up its precondition.
+      skip: { shell: 'needs a collection with an OpenAI embedding field, which needs an OpenAI API key' },
       async setup(ctx) {
         await ensureProducts(ctx)
       },
