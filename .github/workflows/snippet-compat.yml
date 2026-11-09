@@ -10,6 +10,9 @@
 name: Snippet compatibility with new Typesense releases
 
 on:
+  # TEMPORARY: runs on pushes to this branch to preview the issue. Remove before merging.
+  push:
+    branches: [snippet-tests]
   schedule:
     - cron: '17 6 * * *'
   workflow_dispatch:
