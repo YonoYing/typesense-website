@@ -1140,7 +1140,7 @@ let document = try decoder.decode(Company.self, from: data!)
 
 ```bash
 $ curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" -X GET \
-      "http://localhost:8108/collections/companies/documents/124"
+      "http://localhost:8108/collections/companiez/documents/124"
 ```
 
   </template>
@@ -1454,7 +1454,7 @@ Delete an individual document from a collection by using its `id`.
   <template v-slot:JavaScript>
 
 ```js
-client.collections('companies').documents('124').delete()
+client.collections('companiez').documents('124').delete()
 ```
 
   </template>
