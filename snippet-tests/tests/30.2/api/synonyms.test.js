@@ -12,6 +12,15 @@ async function ensureSynonymSets({ api }, ...names) {
   }
 }
 
+// The item examples work on `smart-phone-synonyms` in the `tech-synonyms` set,
+// which the one-way synonym example creates when the page runs in order.
+async function ensureSmartPhoneItem({ api }) {
+  const res = await api.put('/synonym_sets/tech-synonyms', {
+    items: [{ id: 'smart-phone-synonyms', root: 'smart phone', synonyms: ['iphone', 'android'] }],
+  })
+  if (!res.ok) throw new Error(`could not create synonym set tech-synonyms: ${JSON.stringify(res.body)}`)
+}
+
 module.exports = {
   snippets: {
     'multi-way-synonym': {
@@ -30,6 +39,9 @@ module.exports = {
     },
     'retrieve-a-synonym-set': {
       // Guessed from the curl example: GET /synonym_sets/clothing-synonyms
+      async setup(ctx) {
+        await ensureSynonymSets(ctx, 'clothing-synonyms')
+      },
       async verify({ response, expectKeys }) {
         expectKeys(response, ['name', 'items'])
       },
@@ -40,6 +52,9 @@ module.exports = {
     },
     'delete-a-synonym-set': {
       // Guessed from the curl example: DELETE /synonym_sets/clothing-synonyms
+      async setup(ctx) {
+        await ensureSynonymSets(ctx, 'clothing-synonyms')
+      },
       async verify({ expectGone }) {
         await expectGone('/synonym_sets/clothing-synonyms')
       },
@@ -69,20 +84,33 @@ module.exports = {
     },
     'upsert-a-synonym-set-item': {
       // Guessed from the curl example: PUT /synonym_sets/tech-synonyms/items/smart-phone-synonyms
+      async setup(ctx) {
+        await ensureSynonymSets(ctx, 'tech-synonyms')
+      },
       async verify({ expectExists }) {
         await expectExists('/synonym_sets/tech-synonyms/items/smart-phone-synonyms')
       },
     },
     'retrieve-a-synonym-set-item': {
       // Guessed from the curl example: GET /synonym_sets/tech-synonyms/items/smart-phone-synonyms
-      // No specific check guessed: the example passes if it runs without errors.
+      async setup(ctx) {
+        await ensureSmartPhoneItem(ctx)
+      },
+      async verify({ assert, response }) {
+        assert.equal(response.id, 'smart-phone-synonyms')
+      },
     },
     'list-all-synonym-set-items': {
       // Guessed from the curl example: GET /synonym_sets/tech-synonyms/items
-      // No specific check guessed: the example passes if it runs without errors.
+      async setup(ctx) {
+        await ensureSmartPhoneItem(ctx)
+      },
     },
     'delete-a-synonym-set-item': {
       // Guessed from the curl example: DELETE /synonym_sets/tech-synonyms/items/smart-phone-synonyms
+      async setup(ctx) {
+        await ensureSmartPhoneItem(ctx)
+      },
       async verify({ expectGone }) {
         await expectGone('/synonym_sets/tech-synonyms/items/smart-phone-synonyms')
       },

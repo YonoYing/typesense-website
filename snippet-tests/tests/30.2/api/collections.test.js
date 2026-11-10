@@ -112,8 +112,11 @@ module.exports = {
     },
     'update-or-alter-a-collection': {
       // Guessed from the curl example: PATCH /collections/companies
-      async setup({ ensureCollection }) {
-        await ensureCollection('companies')
+      // The example adds a required field, which the server only accepts when
+      // no document lacks it: the collection must be empty, as it is when the
+      // page runs in order.
+      async setup({ createCollection, fixtures }) {
+        await createCollection(fixtures.companies.schema)
       },
       async verify({ assert, expectExists }) {
         const collection = await expectExists('/collections/companies')
@@ -123,8 +126,11 @@ module.exports = {
     },
     'modifying-an-existing-field': {
       // Guessed from the curl example: PATCH /collections/companies
-      async setup({ ensureCollection }) {
-        await ensureCollection('companies')
+      // The example redefines `company_category`, which the previous example
+      // adds: start from an empty `companies` that has it.
+      async setup({ createCollection, fixtures }) {
+        const schema = fixtures.companies.schema
+        await createCollection({ ...schema, fields: [...schema.fields, { name: 'company_category', type: 'string' }] })
       },
       async verify({ assert, expectExists }) {
         const collection = await expectExists('/collections/companies')

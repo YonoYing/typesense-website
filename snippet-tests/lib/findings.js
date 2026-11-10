@@ -89,6 +89,12 @@ function pageName(docRel) {
   return docRel.replace(/^[\d.]+\/(api\/)?/, '')
 }
 
+// True when the run has a result for at least one block of every place an
+// audit row points at.
+function ranRow(slots, ranKeys) {
+  return slots.length > 0 && slots.every(slot => slot.some(c => ranKeys.has(audit.keyOf(c))))
+}
+
 // results: the run's results. Returns { findings, undetected, auditFile }.
 function buildFindings(results) {
   const failing = results.filter(r => r.status === 'fail')
@@ -98,6 +104,7 @@ function buildFindings(results) {
   const attributed = new Set()
 
   // 1. Audit findings the run detected.
+  const ranKeys = new Set(results.map(resultKey))
   const versions = [...new Set(results.map(r => r.page.split('/')[0]))]
   const auditFiles = []
   for (const version of versions) {
@@ -105,10 +112,13 @@ function buildFindings(results) {
     if (!file) continue
     auditFiles.push(file)
     const { rows } = audit.parseAudit(file)
-    const ran = new Set(results.map(r => r.page))
+    const ranPages = new Set(results.map(r => r.page))
     for (const row of rows) {
-      if (!audit.locationsOf(row.where).some(l => ran.has(`${version}/api/${l.page}`))) continue
+      if (!audit.locationsOf(row.where).some(l => ranPages.has(`${version}/api/${l.page}`))) continue
       const { slots } = audit.mapRow(row, version)
+      // A run limited to some snippets (a pull request) only answers for the
+      // findings whose blocks it ran.
+      if (!ranRow(slots, ranKeys)) continue
       const hits = slots.map(slot => slot.filter(c => byKey.has(audit.keyOf(c))))
       if (!slots.length || hits.some(h => !h.length)) {
         undetected.push({ row, slots, hits })
@@ -226,4 +236,4 @@ function consoleFindings(findings) {
   return findings.map(f => `  ${f.id.padEnd(4)} ${f.severity.padEnd(13)} ${f.page} [${f.langs}] ${cell(f.problem, 160)}`).join('\n')
 }
 
-module.exports = { buildFindings, findingsTable, headline, counts, consoleFindings, severityOf, runtimeKey }
+module.exports = { buildFindings, findingsTable, headline, counts, consoleFindings, severityOf, runtimeKey, ranRow }

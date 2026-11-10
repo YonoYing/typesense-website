@@ -13,6 +13,7 @@ const LANG_NAMES = {
 function counts(results) {
   const c = { pass: 0, fail: 0, skip: 0, xfail: 0, xpass: 0, untested: 0, todo: 0, staticOnly: 0 }
   for (const r of results) {
+    if (r.quiet) continue // a passing prose section: checked, not counted
     c[r.status] = (c[r.status] || 0) + 1
     if (r.untested) c.untested++
     if (r.todo) c.todo++

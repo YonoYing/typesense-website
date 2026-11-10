@@ -1,8 +1,9 @@
 # Runs the docs code examples that a pull request touches against a real
-# Typesense server, and checks every language's examples statically (syntax,
+# Typesense server, and checks them statically in every language (syntax,
 # calls the client libraries do not have, tabs that disagree with each other).
-# A docs page is tested when its markdown or its test file changes; a change
-# to the test harness re-runs every covered page.
+# Only the snippets the diff touches run (snippet-tests/lib/changes.js); a
+# change to a test file's shared code runs its page, and a change to the
+# harness runs everything.
 name: Snippet tests
 
 on:

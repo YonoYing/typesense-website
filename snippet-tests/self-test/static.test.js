@@ -192,6 +192,54 @@ test('findings group failures the way the audit does', () => {
   assert.equal(runtimeKey('exited with code 127: /usr/bin/bash: line 5: $: command not found'), '$: command not found')
 })
 
+test('a pull request runs only the snippets its diff touches', () => {
+  const fs = require('fs')
+  const os = require('os')
+  const { parseDiff, snippetsForDiff } = require('../lib/changes')
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'changes-'))
+  const docsRoot = path.join(root, 'docs')
+  const testsRoot = path.join(root, 'tests')
+  fs.mkdirSync(path.join(docsRoot, '99.9', 'api'), { recursive: true })
+  fs.mkdirSync(path.join(testsRoot, '99.9', 'api'), { recursive: true })
+  const page = [
+    '# Page', // 1
+    '', // 2
+    '## First', // 3
+    '', // 4
+    '```js', // 5
+    'client.collections().retrieve()', // 6
+    '```', // 7
+    '', // 8
+    '## Second', // 9
+    '', // 10
+    '```js', // 11
+    "client.collections('c').retrieve()", // 12
+    '```', // 13
+    '',
+  ].join('\n')
+  fs.writeFileSync(path.join(docsRoot, '99.9', 'api', 'p.md'), page)
+  fs.writeFileSync(
+    path.join(testsRoot, '99.9', 'api', 'p.test.js'),
+    "const X = 1\n\nmodule.exports = {\n  snippets: {\n    'first': {\n      skip: 'a',\n    },\n    'second': {\n      skip: 'b',\n    },\n  },\n}\n",
+  )
+  const opts = { docsRoot, testsRoot }
+  const run = diff => snippetsForDiff(parseDiff(diff), opts)
+
+  // An edit inside the second example runs only that example.
+  const docDiff = '+++ b/docs-site/content/99.9/api/p.md\n@@ -12 +12 @@\n'
+  assert.deepEqual(run(docDiff), [{ page: '99.9/api/p.md', only: ['second'] }])
+  // Renaming a heading runs the example under it.
+  assert.deepEqual(run('+++ b/docs-site/content/99.9/api/p.md\n@@ -3 +3 @@\n'), [{ page: '99.9/api/p.md', only: ['first'] }])
+  // A prose edit outside any example runs only that section's prose check.
+  assert.deepEqual(run('+++ b/docs-site/content/99.9/api/p.md\n@@ -2,0 +2,1 @@\n').map(r => r.only), [['page']])
+  // A changed test entry runs that example; a change outside the entries runs the page.
+  assert.deepEqual(run('+++ b/snippet-tests/tests/99.9/api/p.test.js\n@@ -9 +9 @@\n'), [{ page: '99.9/api/p.md', only: ['second'] }])
+  assert.deepEqual(run('+++ b/snippet-tests/tests/99.9/api/p.test.js\n@@ -1 +1 @@\n'), [{ page: '99.9/api/p.md', only: null }])
+  // Pages of an uncovered version, and other files, run nothing.
+  assert.deepEqual(run('+++ b/docs-site/content/1.0/api/p.md\n@@ -1 +1 @@\n+++ b/README.md\n@@ -1 +1 @@\n'), [])
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
 test('the issue links the findings table instead of inlining it', () => {
   const { issueBody } = require('../lib/issue')
   const { findingsDoc } = require('../lib/report')

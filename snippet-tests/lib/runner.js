@@ -173,7 +173,10 @@ async function runPage({
   static: runStatic = true,
 }) {
   const docFile = path.join(docsRoot, docRel)
-  const groups = extractFromFile(docFile).filter(g => !only || only.includes(g.id))
+  // Page-level checks (a rule the page creates, the schema it uses) need every
+  // group; `only` limits which ones are run and reported.
+  const allGroups = extractFromFile(docFile)
+  const groups = allGroups.filter(g => !only || only.includes(g.id))
   const testFile = testFileFor(docRel, testsRoot)
   const tests = loadTests(testFile) || { snippets: {} }
   const resolvedImage = image || tests.image || defaultImageFor(docRel)
@@ -186,16 +189,17 @@ async function runPage({
   }
 
   const markdown = fs.readFileSync(docFile, 'utf8')
-  const staticProblems = runStatic ? staticChecks.checkPage(groups, { version: docsVersionOf(docRel), markdown }) : new Map()
+  const staticProblems = runStatic ? staticChecks.checkPage(allGroups, { version: docsVersionOf(docRel), markdown }) : new Map()
   const problemsFor = (group, lang) => {
     const entry = tests.snippets[group.id]
     if (staticDisabled(entry, lang)) return []
     return staticProblems.get(`${group.id}|${lang}`) || []
   }
 
-  // Languages without an executor (or not selected to run): static only.
+  // Languages without an executor (or not selected to run): static only, so
+  // nothing to report when the static checks are off.
   const executed = new Set(langs.filter(l => executors[l]))
-  for (const group of groups) {
+  for (const group of runStatic ? groups : []) {
     for (const block of group.blocks) {
       if (!CLIENT_LANGUAGES.has(block.lang) || executed.has(block.lang)) continue
       const entry = tests.snippets[group.id]
@@ -211,22 +215,23 @@ async function runPage({
     }
   }
 
-  // JSON blocks (sample responses, bodies, schema fragments) get a result
-  // each; prose sections only when something is wrong with them.
+  // JSON blocks (sample responses, bodies, schema fragments) and prose
+  // sections get a result each. A passing prose section is recorded `quiet`:
+  // it is not counted or printed, but marks the section as checked.
   if (runStatic) {
     for (const item of staticChecks.extractDocItems(markdown)) {
       if (only && !only.includes(item.id)) continue
       const entry = tests.snippets[item.id]
       if (staticDisabled(entry, item.lang)) continue
       const problems = staticProblems.get(`${item.id}|${item.lang}`) || []
-      if (item.kind === 'prose' && !problems.length) continue
+      const quiet = item.kind === 'prose' && !problems.length
       const xfail = entry && forLang(entry.xfail, item.lang)
-      let r = { ...base, id: item.id, line: item.line, heading: item.heading, lang: item.lang, check: 'static', untested: false, todo: false }
+      let r = { ...base, id: item.id, line: item.line, heading: item.heading, lang: item.lang, check: 'static', untested: false, todo: false, ...(quiet ? { quiet } : {}) }
       if (!problems.length) r.status = 'pass'
       else if (xfail) Object.assign(r, { status: 'xfail', reason: xfail, error: staticChecks.formatProblems(problems), problems })
       else Object.assign(r, { status: 'fail', error: staticChecks.formatProblems(problems), problems })
       results.push(r)
-      log(r)
+      if (!quiet) log(r)
     }
   }
 

@@ -5,12 +5,14 @@
 //
 //   node bin/run.js 30.2                       every page in a docs version
 //   node bin/run.js docs-site/content/30.2/api/documents.md
-//   node bin/run.js --changed origin/master    pages touched since a git ref
+//   node bin/run.js --changed origin/master    snippets a branch touches (see lib/changes.js)
 //
 // Options:
 //   --image <image>      server image (default: typesense/typesense:<docs version>)
 //   --langs js,shell     languages to run (default: all executable languages)
 //   --only id1,id2       only these snippet IDs
+//   --isolated           run every snippet alone on a fresh server (finds tests
+//                        whose setup() leans on earlier examples)
 //   --no-static          skip the static checks (syntax, client API, cross-tab)
 //   --report <file>      write results as JSON
 //   --findings <file>    write the findings table as a Markdown document
@@ -20,7 +22,11 @@
 const fs = require('fs')
 const { runPage } = require('../lib/runner')
 const { stopServer, pullImage } = require('../lib/server')
-const { pagesForArgs, pagesForChangedFiles, changedFiles } = require('../lib/pages')
+const { pagesForArgs } = require('../lib/pages')
+const { changedSnippets } = require('../lib/changes')
+const { extractFromFile } = require('../lib/extract')
+const path = require('path')
+const { DOCS_ROOT } = require('../lib/config')
 const { counts, consoleLine, toMarkdown, findingsDoc } = require('../lib/report')
 const { buildFindings, consoleFindings, headline } = require('../lib/findings')
 const { EXECUTABLE_LANGUAGES } = require('../lib/config')
@@ -40,6 +46,7 @@ function parseArgs(argv) {
     else if (a === '--title') opts.title = next()
     else if (a === '--changed') opts.changed = next()
     else if (a === '--no-static') opts.static = false
+    else if (a === '--isolated') opts.isolated = true
     else if (a === '--help' || a === '-h') opts.help = true
     else opts.targets.push(a)
   }
@@ -49,33 +56,51 @@ function parseArgs(argv) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
   if (opts.help) {
-    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(3, 20).join('\n').replace(/^\/\/ ?/gm, ''))
+    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(3, 22).join('\n').replace(/^\/\/ ?/gm, ''))
     return
   }
 
-  let pages = []
-  if (opts.changed) pages = pagesForChangedFiles(changedFiles(opts.changed))
-  if (opts.targets.length) pages = [...new Set([...pages, ...pagesForArgs(opts.targets)])]
-  if (pages.length === 0) {
-    console.log('No covered docs pages to test.')
-    if (opts.report) fs.writeFileSync(opts.report, JSON.stringify({ image: opts.image || null, results: [] }, null, 2))
+  // Each run is { page, only }: `only` limits it to some snippet ids.
+  let runs = []
+  if (opts.changed) runs = changedSnippets(opts.changed)
+  if (opts.targets.length) {
+    for (const page of pagesForArgs(opts.targets)) {
+      const existing = runs.find(r => r.page === page)
+      if (existing) existing.only = null
+      else runs.push({ page, only: null })
+    }
+  }
+  if (opts.only) runs = runs.map(r => ({ ...r, only: r.only ? r.only.filter(id => opts.only.includes(id)) : opts.only }))
+  if (opts.isolated) {
+    // One run per snippet, each on a fresh server.
+    runs = runs.flatMap(r => {
+      const ids = r.only || extractFromFile(path.join(DOCS_ROOT, r.page)).map(g => g.id)
+      return [...new Set(ids)].map(id => ({ page: r.page, only: [id] }))
+    })
+  }
+  runs = runs.filter(r => !r.only || r.only.length)
+  if (runs.length === 0) {
+    console.log(opts.changed ? 'No covered snippets changed.' : 'No covered docs pages to test.')
+    if (opts.report) fs.writeFileSync(opts.report, JSON.stringify({ image: opts.image || null, findings: [], undetected: [], results: [] }, null, 2))
     return
   }
 
   const langs = opts.langs || EXECUTABLE_LANGUAGES
+  const pages = [...new Set(runs.map(r => r.page))]
   const images = [...new Set(pages.map(p => opts.image || defaultImageFor(p)))]
   for (const image of images) pullImage(image)
 
-  console.log(`Testing ${pages.length} page(s) in ${langs.join(', ')}\n`)
+  const snippetCount = runs.reduce((n, r) => n + (r.only ? r.only.length : 0), 0)
+  console.log(`Testing ${pages.length} page(s)${snippetCount ? ` (${runs.some(r => !r.only) ? 'some whole pages, ' : ''}${snippetCount} changed snippet(s))` : ''} in ${langs.join(', ')}\n`)
   const results = []
   try {
-    for (const docRel of pages) {
-      console.log(docRel)
+    for (const run of runs) {
+      console.log(run.only ? `${run.page} [${run.only.join(', ')}]` : run.page)
       const pageResults = await runPage({
-        docRel,
+        docRel: run.page,
         image: opts.image,
         langs,
-        only: opts.only,
+        only: run.only || undefined,
         static: opts.static !== false,
         log: r => console.log(consoleLine(r)),
       })

@@ -115,6 +115,8 @@ node bin/run.js 30.2                          # every page in a docs version
 node bin/run.js 30.2/api/search.md --langs shell --only basic-search
 node bin/run.js 30.2 --image typesense/typesense:31.0.rc25
 node bin/run.js 30.2 --no-static              # runtime only, no static checks
+node bin/run.js --changed origin/master       # only the snippets a branch touches, as a PR run does
+node bin/run.js 30.2 --isolated --no-static   # every snippet alone: finds tests that lean on earlier examples
 node bin/seed.js 30.2/api/documents.md        # guess tests for examples that have none
 node bin/audit.js --extra                     # check the harness against the example audit (no Docker)
 npm run self-test                             # tests for the harness itself
@@ -124,11 +126,11 @@ The static checks use `python3`, `ruby`, `php`, `gofmt` and `bash` when they are
 
 ## Automation
 
-Three workflows in `.github/workflows/` use this harness.
+Three workflows in `.github/workflows/` use this harness. Nothing runs on a plain push.
 
-- **Snippet tests** runs on every PR that touches docs or tests. It runs the examples on each changed page, and every covered page when the harness itself changes.
+- **Snippet tests** runs on every PR that touches docs or tests, and runs only the snippets the PR touches (`lib/changes.js`): an example whose lines or heading changed, a JSON block or prose section that changed, or an example whose test entry changed. A change elsewhere in a test file (`beforeAll`, a helper) runs that page, and a change to the harness runs everything. A new example is a changed example, so it runs too, against the stub test the coverage workflow writes. The selected snippets run on a fresh server, so each test's `setup()` must give its example what it needs; `--isolated` checks that for every snippet.
 - **Snippet test coverage** runs on every PR. For each new example without a finished test, it writes a guessed test marked `todo` and adds a checkbox to the PR description. The check fails until every box is ticked and no `todo` is left. It uses `pull_request_target`, so it only takes effect once merged to the default branch.
-- **Snippet compatibility with new Typesense releases** runs daily. It tests the latest docs version against the newest server image on Docker Hub, release candidates included. Failures go into one issue per release line, which closes itself once everything passes.
+- **Snippet compatibility with new Typesense releases** runs daily, polling Docker Hub for the newest server image, release candidates included, and does nothing when that tag was already tested against the same docs and tests. On a new tag it tests the latest docs version and files one issue per release line (updated by later release candidates, closed once everything passes), linking the findings table. GitHub runs scheduled workflows only from the default branch, so the poll starts once this is merged there.
 
 Both test workflows end with the audit cross-check, which adds a line like "127 of 127 audit findings flagged" to the run summary.
 

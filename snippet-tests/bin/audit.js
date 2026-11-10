@@ -28,6 +28,7 @@ const staticChecks = require('../lib/static')
 const { loadTests, testFileFor } = require('../lib/test-file')
 const { staticDisabled } = require('../lib/runner')
 const { auditFileFor, parseAudit, langsOf, locationsOf, mapRow, keyOf } = require('../lib/audit')
+const { ranRow } = require('../lib/findings')
 
 function parseArgs(argv) {
   const opts = { audit: auditFileFor('30.2') }
@@ -58,10 +59,10 @@ function main() {
     for (const r of report.results) {
       if (r.status === 'fail') flagged.set(`${r.page}|${r.id}|${r.lang}`, r.error || '')
     }
-    // A run that covered only some pages (a PR run) is checked on those pages.
-    const ran = new Set(report.results.map(r => r.page))
+    // A run that covered only some snippets (a PR run) is checked on those.
+    const ranKeys = new Set(report.results.map(r => `${r.page}|${r.id}|${r.lang}`))
     const before = relevant.length
-    relevant = relevant.filter(r => locationsOf(r.where).some(l => ran.has(`${version}/api/${l.page}`)))
+    relevant = relevant.filter(r => ranRow(mapRow(r, version).slots, ranKeys))
     skippedRows = before - relevant.length
   } else {
     const pages = new Set(relevant.flatMap(r => locationsOf(r.where).map(l => `${version}/api/${l.page}`)))
@@ -112,14 +113,14 @@ function main() {
   const bySeverity = sev => relevant.filter(r => r.severity.startsWith(sev)).length
   const headline = `${total - missed - unmapped} of ${total} audit findings flagged (${bySeverity('BREAK')} BREAK, ${bySeverity('WRONG')} WRONG, ${bySeverity('COSMETIC')} COSMETIC)`
   console.log(`\n${headline}, ${missed} missed or partial, ${unmapped} could not be mapped${opts.report ? ' (from report)' : ' (static checks only)'}`)
-  if (skippedRows) console.log(`${skippedRows} finding(s) are on pages this run did not test`)
+  if (skippedRows) console.log(`${skippedRows} finding(s) are on snippets this run did not test`)
   if (outOfScope.length) console.log(`${outOfScope.length} row(s) name no language the harness knows: ${outOfScope.map(r => `${r.id} ${r.lang}`).join(', ')}`)
   if (opts.summary) {
     const bad = lines.filter(l => /^(MISSED|PARTIAL|UNMAPPED)/.test(l))
     const md = [
       '### Audit cross-check',
       '',
-      `**${headline}.**${skippedRows ? ` ${skippedRows} finding(s) are on pages this run did not test.` : ''}`,
+      `**${headline}.**${skippedRows ? ` ${skippedRows} finding(s) are on snippets this run did not test.` : ''}`,
       '',
       ...(bad.length ? ['Not flagged:', '', '```', ...bad, '```', ''] : []),
     ]

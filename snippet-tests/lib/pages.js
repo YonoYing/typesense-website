@@ -5,14 +5,12 @@
 // Only docs versions that have a folder under snippet-tests/tests/ are covered.
 // To start covering a new version, copy the previous version's test folder.
 
-const { execFileSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const { REPO_ROOT, DOCS_ROOT, TESTS_ROOT } = require('./config')
 
 const DOCS_PREFIX = 'docs-site/content/'
 const TESTS_PREFIX = 'snippet-tests/tests/'
-const HARNESS_PREFIXES = ['snippet-tests/lib/', 'snippet-tests/bin/', 'snippet-tests/package']
 
 function coveredVersions(testsRoot = TESTS_ROOT) {
   if (!fs.existsSync(testsRoot)) return []
@@ -50,24 +48,7 @@ function pageForRepoPath(repoPath) {
   return null
 }
 
-function changedFiles(baseRef) {
-  const out = execFileSync('git', ['diff', '--name-only', `${baseRef}...HEAD`], { cwd: REPO_ROOT, encoding: 'utf8' })
-  return out.split('\n').filter(Boolean)
-}
 
-// Pages to test for a set of changed files. A change to the harness itself
-// re-runs every covered page.
-function pagesForChangedFiles(files, { docsRoot = DOCS_ROOT, testsRoot = TESTS_ROOT } = {}) {
-  if (files.some(f => HARNESS_PREFIXES.some(prefix => f.startsWith(prefix)))) {
-    return coveredVersions(testsRoot).flatMap(v => pagesInVersion(v, docsRoot))
-  }
-  const pages = new Set()
-  for (const f of files) {
-    const page = pageForRepoPath(f)
-    if (page && isCovered(page, testsRoot) && fs.existsSync(path.join(docsRoot, page))) pages.add(page)
-  }
-  return [...pages].sort()
-}
 
 // Resolves CLI arguments (versions, .md files or .test.js files) to pages.
 function pagesForArgs(args, { docsRoot = DOCS_ROOT } = {}) {
@@ -92,8 +73,6 @@ module.exports = {
   pagesInVersion,
   isCovered,
   pageForRepoPath,
-  changedFiles,
-  pagesForChangedFiles,
   pagesForArgs,
   DOCS_PREFIX,
   TESTS_PREFIX,
