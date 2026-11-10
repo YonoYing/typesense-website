@@ -86,8 +86,19 @@ jobs:
           node bin/run.js "${{ steps.target.outputs.docs }}"
           --image "typesense/typesense:${{ steps.target.outputs.tag }}"
           --report ../report.json
+          --findings ../findings.md
           --title "Docs examples vs typesense/typesense:${{ steps.target.outputs.tag }}"
           --summary "$GITHUB_STEP_SUMMARY"
+
+      # The issue links this document for the full findings table.
+      - name: Upload the findings table
+        id: findings
+        if: steps.run.outcome != 'skipped' && hashFiles('findings.md') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-example-findings-${{ steps.target.outputs.tag }}
+          path: findings.md
+          retention-days: 90
 
       # Every finding of the example audit (snippet-tests/audit) must be flagged.
       - name: Cross-check against the example audit
@@ -102,6 +113,7 @@ jobs:
           TAG: ${{ steps.target.outputs.tag }}
           LINE: ${{ steps.target.outputs.line }}
           DOCS_VERSION: ${{ steps.target.outputs.docs }}
+          FINDINGS_URL: ${{ steps.findings.outputs.artifact-url }}
         with:
           script: |
             const fs = require('fs')
@@ -118,6 +130,7 @@ jobs:
               line: process.env.LINE,
               docsVersion: process.env.DOCS_VERSION,
               runUrl,
+              findingsUrl: process.env.FINDINGS_URL || undefined,
             })
             core.info(`Issue: ${outcome.action}${outcome.number ? ` #${outcome.number}` : ''}`)
 

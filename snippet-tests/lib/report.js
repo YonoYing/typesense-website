@@ -61,8 +61,9 @@ function failureList(failures) {
 
 // The findings table, in the example audit's format (see lib/findings.js),
 // followed by the per-example counts. `found` is buildFindings()'s result; it
-// is computed here when not given.
-function findingsSection(results, found) {
+// is computed here when not given. With `tableLink`, the table itself is left
+// out and linked instead (the issue links a downloadable findings.md).
+function findingsSection(results, found, { tableLink } = {}) {
   const { buildFindings, findingsTable, headline } = require('./findings')
   const { findings, undetected, auditFiles } = found || buildFindings(results)
   const c = counts(results)
@@ -82,7 +83,9 @@ function findingsSection(results, found) {
       'BREAK: the code throws, fails to compile, or the server rejects it. WRONG: it runs but does the wrong thing. COSMETIC: stale comments, inconsistent values, invalid sample JSON, prose slips.' +
         (auditFiles.length ? ` Ids are the example audit's (\`snippet-tests/audit/\`); N1, N2... are problems the audit does not list.` : ''),
       '',
-      findingsTable(findings),
+      tableLink
+        ? `The table of all ${findings.length} findings is in **[findings.md](${tableLink})** (download; GitHub delivers it as a zip).`
+        : findingsTable(findings),
       '',
     )
   }
@@ -129,4 +132,34 @@ function toMarkdown(results, { title = 'Docs snippet tests', image, found } = {}
   return lines.join('\n')
 }
 
-module.exports = { counts, consoleLine, toMarkdown, findingsSection, failureList, pageUrl, sourceUrl, LANG_NAMES }
+// A standalone Markdown document with the findings table, in the same shape
+// as the example audit (written by `bin/run.js --findings <file>`).
+function findingsDoc(results, found, { title = 'Docs code example findings', image } = {}) {
+  const { buildFindings, findingsTable, headline } = require('./findings')
+  const { findings, undetected } = found || buildFindings(results)
+  const pages = [...new Set(results.map(r => r.page.split('/')[0]))]
+  const lines = [
+    `# ${title}`,
+    '',
+    `Docs: ${pages.map(v => `docs-site/content/${v}/**`).join(', ')}${image ? `. Server: \`${image}\`` : ''}. Generated ${new Date().toISOString().slice(0, 10)} by snippet-tests.`,
+    `Count: ${findings.length ? headline(findings) : 'no findings'}.`,
+    '',
+    'Severity:',
+    '- BREAK: the code throws, fails to compile, or the server rejects it.',
+    '- WRONG: it runs but does the wrong thing.',
+    '- COSMETIC: stale comments, inconsistent values, invalid sample JSON, prose slips.',
+    '',
+    'Ids are the example audit\'s (`snippet-tests/audit/`); N1, N2... are problems the audit does not list.',
+    '',
+    '## Findings',
+    '',
+    findingsTable(findings),
+    '',
+  ]
+  if (undetected.length) {
+    lines.push('## Audit findings this run did not detect', '', ...undetected.map(u => `- **${u.row.id}** (${u.row.severity}) ${u.row.where} [${u.row.lang}]`), '')
+  }
+  return lines.join('\n')
+}
+
+module.exports = { counts, consoleLine, toMarkdown, findingsSection, findingsDoc, failureList, pageUrl, sourceUrl, LANG_NAMES }

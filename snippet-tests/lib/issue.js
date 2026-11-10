@@ -14,13 +14,14 @@ function issueTitle(line) {
   return `Docs code examples failing on Typesense ${line}`
 }
 
-// The issue lists findings in the example audit's table format, like the run
-// summary. GitHub caps an issue body at 65536 characters.
-function issueBody({ report, tag, docsVersion, runUrl }) {
+// The issue gives the findings count and links the table, which the workflow
+// uploads as findings.md (`findingsUrl`). Without a link the table is inline.
+// GitHub caps an issue body at 65536 characters.
+function issueBody({ report, tag, docsVersion, runUrl, findingsUrl }) {
   const lines = [
     `The code examples in the **${docsVersion}** docs were run against \`typesense/typesense:${tag}\`.`,
     '',
-    ...findingsSection(report.results),
+    ...findingsSection(report.results, null, { tableLink: findingsUrl }),
     'Fix the example (or its test in `snippet-tests/tests/`), and this issue closes automatically once everything passes.',
     '',
     '---',
@@ -34,7 +35,7 @@ function issueBody({ report, tag, docsVersion, runUrl }) {
 
 // Creates, updates or closes the issue. `github` and `context` are the
 // objects actions/github-script provides.
-async function fileIssue({ github, context, report, tag, line, docsVersion, runUrl }) {
+async function fileIssue({ github, context, report, tag, line, docsVersion, runUrl, findingsUrl }) {
   const { owner, repo } = context.repo
   const title = issueTitle(line)
   const failures = report.results.filter(r => r.status === 'fail')
@@ -49,7 +50,7 @@ async function fileIssue({ github, context, report, tag, line, docsVersion, runU
   const existing = open.find(i => i.title === title && !i.pull_request)
 
   if (failures.length) {
-    const body = issueBody({ report, tag, docsVersion, runUrl })
+    const body = issueBody({ report, tag, docsVersion, runUrl, findingsUrl })
     if (existing) {
       await github.rest.issues.update({ owner, repo, issue_number: existing.number, body })
       return { action: 'updated', number: existing.number }

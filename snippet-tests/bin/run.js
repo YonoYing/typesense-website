@@ -13,6 +13,7 @@
 //   --only id1,id2       only these snippet IDs
 //   --no-static          skip the static checks (syntax, client API, cross-tab)
 //   --report <file>      write results as JSON
+//   --findings <file>    write the findings table as a Markdown document
 //   --summary <file>     append a Markdown summary (e.g. $GITHUB_STEP_SUMMARY)
 //   --title <text>       heading for the Markdown summary
 
@@ -20,7 +21,7 @@ const fs = require('fs')
 const { runPage } = require('../lib/runner')
 const { stopServer, pullImage } = require('../lib/server')
 const { pagesForArgs, pagesForChangedFiles, changedFiles } = require('../lib/pages')
-const { counts, consoleLine, toMarkdown } = require('../lib/report')
+const { counts, consoleLine, toMarkdown, findingsDoc } = require('../lib/report')
 const { buildFindings, consoleFindings, headline } = require('../lib/findings')
 const { EXECUTABLE_LANGUAGES } = require('../lib/config')
 const { defaultImageFor } = require('../lib/runner')
@@ -34,6 +35,7 @@ function parseArgs(argv) {
     else if (a === '--langs') opts.langs = next().split(',')
     else if (a === '--only') opts.only = next().split(',')
     else if (a === '--report') opts.report = next()
+    else if (a === '--findings') opts.findings = next()
     else if (a === '--summary') opts.summary = next()
     else if (a === '--title') opts.title = next()
     else if (a === '--changed') opts.changed = next()
@@ -47,7 +49,7 @@ function parseArgs(argv) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
   if (opts.help) {
-    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(3, 19).join('\n').replace(/^\/\/ ?/gm, ''))
+    console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(3, 20).join('\n').replace(/^\/\/ ?/gm, ''))
     return
   }
 
@@ -100,6 +102,7 @@ async function main() {
   const undetected = found.undetected.map(u => ({ id: u.row.id, severity: u.row.severity, where: u.row.where, lang: u.row.lang, problem: u.row.problem }))
   if (opts.report) fs.writeFileSync(opts.report, JSON.stringify({ image, findings, undetected, results }, null, 2))
   if (opts.summary) fs.appendFileSync(opts.summary, toMarkdown(results, { title: opts.title, image, found }) + '\n')
+  if (opts.findings) fs.writeFileSync(opts.findings, findingsDoc(results, found, { title: opts.title, image }) + '\n')
   process.exitCode = c.fail > 0 ? 1 : 0
 }
 

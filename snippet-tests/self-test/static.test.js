@@ -192,6 +192,20 @@ test('findings group failures the way the audit does', () => {
   assert.equal(runtimeKey('exited with code 127: /usr/bin/bash: line 5: $: command not found'), '$: command not found')
 })
 
+test('the issue links the findings table instead of inlining it', () => {
+  const { issueBody } = require('../lib/issue')
+  const { findingsDoc } = require('../lib/report')
+  const results = [{ page: '99.9/api/p.md', id: 'a', lang: 'python', line: 10, status: 'fail', problems: [{ rule: 'py-import-keyword', message: 'm1', line: 1 }] }]
+  const linked = issueBody({ report: { results }, tag: '99.9', docsVersion: '99.9', runUrl: 'https://run', findingsUrl: 'https://artifact' })
+  assert.match(linked, /1 findings = 1 BREAK/)
+  assert.match(linked, /\[findings\.md\]\(https:\/\/artifact\)/)
+  assert.doesNotMatch(linked, /\| # \| Sev \|/)
+  assert.match(issueBody({ report: { results }, tag: '99.9', docsVersion: '99.9' }), /\| # \| Sev \|/, 'no link: table inline')
+  const doc = findingsDoc(results)
+  assert.match(doc, /^# /)
+  assert.match(doc, /\| N1 \| BREAK \|/)
+})
+
 test('the harness flags every finding in the audit (BREAK, WRONG and COSMETIC)', { timeout: 300000 }, () => {
   const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'audit.js')], { encoding: 'utf8' })
   const summary = (res.stdout.split('\n').find(l => /audit findings flagged/.test(l)) || '').trim()
