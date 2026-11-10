@@ -135,14 +135,17 @@ function toMarkdown(results, { title = 'Docs snippet tests', image, found } = {}
 
 // A standalone Markdown document with the findings table, in the same shape
 // as the example audit (written by `bin/run.js --findings <file>`).
-function findingsDoc(results, found, { title = 'Docs code example findings', image } = {}) {
+// `scope` replaces the default "docs-site/content/<version>/**" description,
+// e.g. for a PR run that tested only the examples it touches.
+function findingsDoc(results, found, { title = 'Docs code example findings', image, scope } = {}) {
   const { buildFindings, findingsTable, headline } = require('./findings')
   const { findings, undetected } = found || buildFindings(results)
-  const pages = [...new Set(results.map(r => r.page.split('/')[0]))]
+  const versions = [...new Set(results.map(r => r.page.split('/')[0]))]
+  const docs = scope || versions.map(v => `docs-site/content/${v}/**`).join(', ')
   const lines = [
     `# ${title}`,
     '',
-    `Docs: ${pages.map(v => `docs-site/content/${v}/**`).join(', ')}${image ? `. Server: \`${image}\`` : ''}. Generated ${new Date().toISOString().slice(0, 10)} by snippet-tests.`,
+    `Docs: ${docs}${image ? `. Server: \`${image}\`` : ''}. Generated ${new Date().toISOString().slice(0, 10)} by snippet-tests.`,
     `Count: ${findings.length ? headline(findings) : 'no findings'}.`,
     '',
     'Severity:',

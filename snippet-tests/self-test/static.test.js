@@ -259,6 +259,39 @@ test('the issue links the findings table instead of inlining it', () => {
   assert.match(doc, /\| N1 \| BREAK \|/)
 })
 
+test('the PR comment carries the findings table and is updated in place', async () => {
+  const { commentBody, postComment, MARKER } = require('../lib/pr-comment')
+  const fs = require('fs')
+  const os = require('os')
+  const results = [{ page: '99.9/api/p.md', id: 'a', lang: 'python', line: 10, status: 'fail', problems: [{ rule: 'py-import-keyword', message: 'm1', line: 1 }] }]
+  const body = commentBody({ report: { results }, runUrl: 'https://run' })
+  assert.ok(body.startsWith(MARKER))
+  assert.match(body, /\| N1 \| BREAK \|/)
+  assert.match(body, /does not block the merge/)
+  assert.match(commentBody({ report: { results: [{ ...results[0], status: 'pass' }] } }), /No findings/)
+
+  // Fake GitHub API: the second run updates the first run's comment.
+  const comments = []
+  const github = {
+    paginate: async () => comments,
+    rest: {
+      issues: {
+        listComments: () => {},
+        createComment: async ({ body }) => { comments.push({ id: 1, body, user: { type: 'Bot' } }); return { data: { id: 1 } } },
+        updateComment: async ({ comment_id, body }) => { comments.find(c => c.id === comment_id).body = body },
+      },
+    },
+  }
+  const context = { repo: { owner: 'o', repo: 'r' }, payload: { pull_request: { number: 7 } } }
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'prc-')), 'report.json')
+  fs.writeFileSync(file, JSON.stringify({ results }))
+  assert.equal((await postComment({ github, context, reportFile: file })).action, 'created')
+  fs.writeFileSync(file, JSON.stringify({ results: [{ ...results[0], status: 'pass' }] }))
+  assert.equal((await postComment({ github, context, reportFile: file })).action, 'updated')
+  assert.equal(comments.length, 1)
+  assert.match(comments[0].body, /No findings/)
+})
+
 test('the harness flags every finding in the audit (BREAK, WRONG and COSMETIC)', { timeout: 300000 }, () => {
   const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'audit.js')], { encoding: 'utf8' })
   const summary = (res.stdout.split('\n').find(l => /audit findings flagged/.test(l)) || '').trim()

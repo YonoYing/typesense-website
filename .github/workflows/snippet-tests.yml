@@ -4,6 +4,11 @@
 # Only the snippets the diff touches run (snippet-tests/lib/changes.js); a
 # change to a test file's shared code runs its page, and a change to the
 # harness runs everything.
+#
+# The check reports and never blocks: broken examples do not fail it. The
+# findings go into one comment on the PR (the same table as the compatibility
+# issue's findings.md), updated on every push. Only a broken harness (its
+# self-test) fails the check.
 name: Snippet tests
 
 on:
@@ -21,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write # the findings comment
 
 concurrency:
   group: snippet-tests-${{ github.event.pull_request.number || github.ref }}
@@ -58,8 +64,11 @@ jobs:
       - name: Static check tools
         run: for t in python3 ruby php gofmt bash; do printf '%-8s' "$t"; command -v "$t" >/dev/null && echo found || echo missing; done
 
+      # Broken examples are reported, not failed: continue-on-error keeps the
+      # check green, and the findings comment below carries the result.
       - name: Test changed examples
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         run: >
           node bin/run.js
           --changed "origin/${{ github.base_ref }}"
@@ -69,14 +78,26 @@ jobs:
 
       - name: Test requested examples
         if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: >
           node bin/run.js "${{ inputs.target }}"
           --report ../report.json
           --title "Docs snippet tests"
           --summary "$GITHUB_STEP_SUMMARY"
 
-      # Every finding of the example audit (snippet-tests/audit) on the pages
-      # this run tested must be flagged.
+      # Every finding of the example audit (snippet-tests/audit) on the
+      # snippets this run tested should be flagged. Reported, not enforced.
       - name: Cross-check against the example audit
         if: always() && hashFiles('report.json') != ''
+        continue-on-error: true
         run: node bin/audit.js --report ../report.json --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment the findings on the pull request
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { postComment } = require(`${process.env.GITHUB_WORKSPACE}/snippet-tests/lib/pr-comment.js`)
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const outcome = await postComment({ github, context, core, reportFile: `${process.env.GITHUB_WORKSPACE}/report.json`, runUrl })
+            core.info(`Findings comment: ${outcome.action}`)
