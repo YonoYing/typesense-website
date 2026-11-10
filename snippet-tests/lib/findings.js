@@ -48,9 +48,17 @@ function runtimeKey(error) {
     .trim()
 }
 
-// Problems of one failing result, each with a grouping key.
+const SYNTAX = /-syntax$/
+
+// Problems of one failing result, each with a grouping key. An unbalanced
+// bracket on the same line as a syntax error the language's own parser
+// reported is the same bug, reported once.
 function problemsOf(r) {
-  const out = (r.problems || []).map(p => ({ ...p, key: p.rule }))
+  const statics = r.problems || []
+  const syntaxLines = new Set(statics.filter(p => SYNTAX.test(p.rule)).map(p => p.line))
+  const out = statics
+    .filter(p => !(p.rule === 'brackets' && (syntaxLines.has(p.line) || syntaxLines.has(undefined))))
+    .map(p => ({ ...p, key: p.rule }))
   if (r.runtimeError) {
     out.push({ rule: 'runtime', key: `runtime:${runtimeKey(r.runtimeError)}`, message: runtimeKey(r.runtimeError), runtime: true })
   }
@@ -89,10 +97,15 @@ function pageName(docRel) {
   return docRel.replace(/^[\d.]+\/(api\/)?/, '')
 }
 
-// True when the run has a result for at least one block of every place an
-// audit row points at.
+// The places an audit row points at that this run tested (a pull request run
+// tests only some snippets). Each slot keeps only the blocks that ran.
+function ranSlots(slots, ranKeys) {
+  return slots.map(slot => slot.filter(c => ranKeys.has(audit.keyOf(c)))).filter(slot => slot.length)
+}
+
+// True when the run tested at least one place the row points at.
 function ranRow(slots, ranKeys) {
-  return slots.length > 0 && slots.every(slot => slot.some(c => ranKeys.has(audit.keyOf(c))))
+  return ranSlots(slots, ranKeys).length > 0
 }
 
 // results: the run's results. Returns { findings, undetected, auditFile }.
@@ -115,10 +128,11 @@ function buildFindings(results) {
     const ranPages = new Set(results.map(r => r.page))
     for (const row of rows) {
       if (!audit.locationsOf(row.where).some(l => ranPages.has(`${version}/api/${l.page}`))) continue
-      const { slots } = audit.mapRow(row, version)
-      // A run limited to some snippets (a pull request) only answers for the
-      // findings whose blocks it ran.
-      if (!ranRow(slots, ranKeys)) continue
+      // A run limited to some snippets (a pull request) answers for the places
+      // of a finding it tested: D6 covers two examples, and a PR touching one
+      // of them still reports D6 there.
+      const slots = ranSlots(audit.mapRow(row, version).slots, ranKeys)
+      if (!slots.length) continue
       const hits = slots.map(slot => slot.filter(c => byKey.has(audit.keyOf(c))))
       if (!slots.length || hits.some(h => !h.length)) {
         undetected.push({ row, slots, hits })
@@ -236,4 +250,4 @@ function consoleFindings(findings) {
   return findings.map(f => `  ${f.id.padEnd(4)} ${f.severity.padEnd(13)} ${f.page} [${f.langs}] ${cell(f.problem, 160)}`).join('\n')
 }
 
-module.exports = { buildFindings, findingsTable, headline, counts, consoleFindings, severityOf, runtimeKey, ranRow }
+module.exports = { buildFindings, findingsTable, headline, counts, consoleFindings, severityOf, runtimeKey, ranRow, ranSlots, problemsOf }

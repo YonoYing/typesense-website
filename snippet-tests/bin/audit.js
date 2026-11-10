@@ -28,7 +28,7 @@ const staticChecks = require('../lib/static')
 const { loadTests, testFileFor } = require('../lib/test-file')
 const { staticDisabled } = require('../lib/runner')
 const { auditFileFor, parseAudit, langsOf, locationsOf, mapRow, keyOf } = require('../lib/audit')
-const { ranRow } = require('../lib/findings')
+const { ranRow, ranSlots } = require('../lib/findings')
 
 function parseArgs(argv) {
   const opts = { audit: auditFileFor('30.2') }
@@ -54,13 +54,14 @@ function main() {
   // Flags: `${docRel}|${groupId}|${lang}` the harness marked as failing.
   const flagged = new Map() // key -> text
   let skippedRows = 0
+  let ranKeys = null
   if (opts.report) {
     const report = JSON.parse(fs.readFileSync(opts.report, 'utf8'))
     for (const r of report.results) {
       if (r.status === 'fail') flagged.set(`${r.page}|${r.id}|${r.lang}`, r.error || '')
     }
     // A run that covered only some snippets (a PR run) is checked on those.
-    const ranKeys = new Set(report.results.map(r => `${r.page}|${r.id}|${r.lang}`))
+    ranKeys = new Set(report.results.map(r => `${r.page}|${r.id}|${r.lang}`))
     const before = relevant.length
     relevant = relevant.filter(r => ranRow(mapRow(r, version).slots, ranKeys))
     skippedRows = before - relevant.length
@@ -86,7 +87,10 @@ function main() {
   let unmapped = 0
   const lines = []
   for (const row of relevant) {
-    const { slots, notes } = mapRow(row, version)
+    const mapped = mapRow(row, version)
+    // With a report, only the places this run tested count.
+    const slots = ranKeys ? ranSlots(mapped.slots, ranKeys) : mapped.slots
+    const notes = mapped.notes
     if (!slots.length) {
       unmapped++
       lines.push(`UNMAPPED ${row.id.padEnd(4)} ${row.severity.padEnd(13)} ${row.where} [${row.lang}] (${notes.join('; ')})`)
