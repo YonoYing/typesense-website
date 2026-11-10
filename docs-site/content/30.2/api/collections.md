@@ -713,7 +713,7 @@ client.collections['companies'].retrieve()
   <template v-slot:Ruby>
 
 ```rb
-client.collections['companies'].retrieve
+client.collections['companies'.retrieve
 ```
 
   </template>
@@ -770,7 +770,7 @@ curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
     {"name": "num_employees", "type": "int32"},
     {"name": "country", "type": "string", "facet": true}
   ],
-  "default_sorting_field": "num_employees"
+  "default_sorting_field": "num_employees",
 }
 ```
 
@@ -779,6 +779,28 @@ curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
 
 **Definition**
 `GET ${TYPESENSE_HOST}/collections/:collection`
+
+## Check if a collection exists
+
+Returns whether a collection with the given name exists.
+
+<Tabs :tabs="['JavaScript','Shell']">
+  <template v-slot:JavaScript>
+
+```js
+client.collections('companies').exist()
+```
+
+  </template>
+  <template v-slot:Shell>
+
+```bash
+curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+    "http://localhost:8108/collections/companies"
+```
+
+  </template>
+</Tabs>
 
 ## List all collections
 
