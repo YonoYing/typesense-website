@@ -75,9 +75,11 @@ function checkRuby(code) {
   const res = run('ruby', ['-W0', '-c', '-'], code)
   if (res.error) return null
   if (res.status === 0) return []
-  const msg = firstLine(res.stderr.replace(/^-:/gm, 'line '))
-  const m = msg.match(/line (\d+)/)
-  return [{ rule: 'ruby-syntax', line: m ? Number(m[1]) : undefined, message: `Ruby syntax error: ${msg}` }]
+  // Ruby reports "-:1: syntax error..." (or "ruby: -:1: ..." with Prism).
+  const m = res.stderr.match(/-:(\d+):/)
+  // First line only: newer Ruby (Prism) follows it with a code frame.
+  const msg = res.stderr.replace(/^(ruby: )?-:\d+:\s*/gm, '').split(/\r?\n/)[0].trim()
+  return [{ rule: 'ruby-syntax', line: m ? Number(m[1]) : undefined, message: `Ruby syntax error on line ${m ? m[1] : '?'}: ${msg}` }]
 }
 
 function checkPhp(code) {

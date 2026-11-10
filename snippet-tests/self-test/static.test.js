@@ -190,6 +190,11 @@ test('findings group failures the way the audit does', () => {
   assert.match(headline(findings), /^3 findings = 2 BREAK, 0 WRONG, 1 COSMETIC/)
   assert.match(findingsTable(findings), /^\| # \| Sev \| Page \| Lang \| Snippet \| Problem \| Fix \|/)
   assert.equal(runtimeKey('exited with code 127: /usr/bin/bash: line 5: $: command not found'), '$: command not found')
+
+  // A bracket and a parser error on the same line are one bug.
+  const { problemsOf } = require('../lib/findings')
+  const ruby = fail('r', 'ruby', { problems: [{ rule: 'brackets', line: 1, message: 'b' }, { rule: 'ruby-syntax', line: 1, message: 's' }] })
+  assert.deepEqual(problemsOf(ruby).map(p => p.rule), ['ruby-syntax'])
 })
 
 test('a pull request runs only the snippets its diff touches', () => {
