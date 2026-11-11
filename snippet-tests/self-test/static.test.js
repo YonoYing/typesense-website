@@ -292,8 +292,25 @@ test('the PR comment carries the findings table and is updated in place', async 
   assert.match(comments[0].body, /No findings/)
 })
 
+// The audit describes the docs as they were when it was written; a fixed
+// example no longer shows its problem. So the harness is checked against the
+// docs at that commit (config AUDIT_DOCS_REF), extracted from git.
+function auditedDocs() {
+  const fs = require('fs')
+  const os = require('os')
+  const { REPO_ROOT, AUDIT_DOCS_REF } = require('../lib/config')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'audited-docs-'))
+  const tar = spawnSync('git', ['archive', '--format=tar', AUDIT_DOCS_REF, 'docs-site/content'], { cwd: REPO_ROOT, maxBuffer: 1 << 30 })
+  if (tar.status !== 0) throw new Error(`git archive ${AUDIT_DOCS_REF} failed (a shallow clone needs fetch-depth: 0): ${tar.stderr}`)
+  // cwd rather than -C: GNU tar reads "C:\..." as a remote host on Windows.
+  const x = spawnSync('tar', ['-x'], { cwd: dir, input: tar.stdout, maxBuffer: 1 << 30 })
+  if (x.status !== 0) throw new Error(`tar failed: ${x.stderr}`)
+  return path.join(dir, 'docs-site', 'content')
+}
+
 test('the harness flags every finding in the audit (BREAK, WRONG and COSMETIC)', { timeout: 300000 }, () => {
-  const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'audit.js')], { encoding: 'utf8' })
+  const env = { ...process.env, SNIPPET_DOCS_ROOT: auditedDocs() }
+  const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'audit.js')], { encoding: 'utf8', env })
   const summary = (res.stdout.split('\n').find(l => /audit findings flagged/.test(l)) || '').trim()
   assert.match(summary, /^127 of 127 audit findings flagged/, summary)
   assert.equal(res.status, 0, `${summary}\n${res.stdout.split('\n').filter(l => /^(MISSED|PARTIAL|UNMAPPED)/.test(l)).join('\n')}`)
