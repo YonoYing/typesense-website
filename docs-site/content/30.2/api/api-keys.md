@@ -205,7 +205,7 @@ List<String> actionValues = new ArrayList<>();
 List<String> collectionValues = new ArrayList<>();
 
 actionValues.add("documents:search");
-collectionValues.add("intbooks");
+collectionValues.add("companies");
 
 apiKeySchema.description("Search only Key").actions(actionValues).collections(collectionValues);
 
@@ -551,7 +551,7 @@ final key = await client.key(1).retrieve();
   <template v-slot:Java>
 
 ```java
-ApiKey apiKey = client.keys(1).retrieve();
+ApiKey apiKey = client.keys(1L).retrieve();
 ```
 
   </template>
@@ -762,7 +762,7 @@ final key = await client.key(1).delete();
   <template v-slot:Java>
 
 ```java
-ApiKey apiKey = client.keys(1).delete();
+ApiKey apiKey = client.keys(1L).delete();
 ```
 
   </template>
@@ -953,9 +953,9 @@ client.Keys().GenerateScopedSearchKey(keyWithSearchPermissions, map[string]inter
 KEY_WITH_SEARCH_PERMISSIONS="RN23GFr1s6jQ9kgSNg2O7fYcAUXU7127"
 EMBEDDED_SEARCH_PARAMETERS_JSON='{"filter_by":"company_id:124","expires_at":1906054106}'
 
-digest=$(echo -n $EMBEDDED_SEARCH_PARAMETERS_JSON | openssl dgst -sha256 -hmac $KEY_WITH_SEARCH_PERMISSIONS -binary | base64 -w0)
+digest=$(echo -n $EMBEDDED_SEARCH_PARAMETERS_JSON | openssl dgst -sha256 -hmac $KEY_WITH_SEARCH_PERMISSIONS -binary | base64 | tr -d '\n')
 
-scoped_api_key=$(echo -n "${digest}${KEY_WITH_SEARCH_PERMISSIONS:0:4}${EMBEDDED_SEARCH_PARAMETERS_JSON}" | base64 -w0)
+scoped_api_key=$(echo -n "${digest}${KEY_WITH_SEARCH_PERMISSIONS:0:4}${EMBEDDED_SEARCH_PARAMETERS_JSON}" | base64 | tr -d '\n')
 
 echo $scoped_api_key
 ```

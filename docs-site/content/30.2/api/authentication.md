@@ -39,8 +39,8 @@ let client = new Typesense.Client({
 //    you can also use Typesense.SearchClient().
 // This can also help reduce your bundle size by only including the classes you need:
 
-import { SearchClient as TypesenseSearchClient } from "typesense";
-let client = new TypesenseSearchClient({
+const TypesenseSearchClient = require('typesense').SearchClient
+let searchClient = new TypesenseSearchClient({
   'nodes': [{
     'host': 'localhost', // For Typesense Cloud use xxx.a1.typesense.net
     'port': '8108',      // For Typesense Cloud use 443
@@ -133,7 +133,7 @@ final config = Configuration(
 
 ```java
 import org.typesense.api.*;
-import org.typesense.models.*;
+import org.typesense.model.*;
 import org.typesense.resources.*;
 
 ArrayList<Node> nodes = new ArrayList<>();

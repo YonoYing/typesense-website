@@ -146,7 +146,7 @@ final searchRequests = {
   ]
 };
 
-# Search parameters that are common to all searches go here
+// Search parameters that are common to all searches go here
 final commonSearchParams =  {
     'query_by': 'name',
 };
@@ -158,22 +158,18 @@ await client.multiSearch.perform(searchRequests, queryParams: commonSearchParams
   <template v-slot:Java>
 
 ```java
-HashMap<String,String > search1 = new HashMap<>();
-HashMap<String,String > search2 = new HashMap<>();
+MultiSearchCollectionParameters search1 = new MultiSearchCollectionParameters();
+search1.setCollection("products");
+search1.setQ("shoe");
+search1.setFilterBy("price:=[50..120]");
 
-search1.put("collection","products");
-search1.put("q","shoe");
-search1.put("filter_by","price:=[50..120]");
+MultiSearchCollectionParameters search2 = new MultiSearchCollectionParameters();
+search2.setCollection("brands");
+search2.setQ("Nike");
 
-search2.put("collection","brands");
-search2.put("q","Nike");
-
-List<HashMap<String, String>> searches = new ArrayList<>();
-searches.add(search1);
-searches.add(search2);
-
-HashMap<String, List<HashMap<String ,String>>> searchRequests = new HashMap<>();
-searchRequests.put("searches",searches);
+MultiSearchSearchesParameter searchRequests = new MultiSearchSearchesParameter()
+    .addSearchesItem(search1)
+    .addSearchesItem(search2);
 
 HashMap<String,String> commonSearchParams = new HashMap<>();
 commonSearchParams.put("query_by","name");
@@ -188,12 +184,12 @@ client.multiSearch.perform(searchRequests, commonSearchParams);
 searchRequests := api.MultiSearchSearchesParameter{
   Searches: []api.MultiSearchCollectionParameters{
     {
-      Collection: "products",
+      Collection: pointer.String("products"),
       Q:          pointer.String("shoe"),
       FilterBy:   pointer.String("price:=[50..120]"),
     },
     {
-      Collection: "brands",
+      Collection: pointer.String("brands"),
       Q:          pointer.String("Nike"),
     },
   },
@@ -464,8 +460,8 @@ In addition, you can use the following parameters with `multi_search` requests:
 
 | Parameter            | Required | Description                                                                                                                                                                                                                                                                                                                                   |
 |----------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| limit_multi_searches | no	      | Max number of search requests that can be sent in a multi-search request. Eg: `20`<br><br>Default: `50`<br><br>You want to generate a [scoped API key](./api-keys.md##generate-scoped-search-key) with this parameter embedded and use that API key to perform the search, so it's automatically applied and can't be changed at search time. |
-| x-typesense-api-key  | no	      | You can embed a separate search API key for each search within a multi_search request. <br><br> This is useful when you want to apply different embedded filters for each collection in individual [scoped API keys](./api-keys.md##generate-scoped-search-key).                                                                              |
+| limit_multi_searches | no	      | Max number of search requests that can be sent in a multi-search request. Eg: `20`<br><br>Default: `50`<br><br>You want to generate a [scoped API key](./api-keys.md#generate-scoped-search-key) with this parameter embedded and use that API key to perform the search, so it's automatically applied and can't be changed at search time. |
+| x-typesense-api-key  | no	      | You can embed a separate search API key for each search within a multi_search request. <br><br> This is useful when you want to apply different embedded filters for each collection in individual [scoped API keys](./api-keys.md#generate-scoped-search-key).                                                                              |
 
 
 ## Example UI Implementation

@@ -534,7 +534,7 @@ curl "http://localhost:8108/debug" \
 ```json
 {
   "state": 1,
-  "version": "28.0"
+  "version": "30.2"
 }
 ```
 

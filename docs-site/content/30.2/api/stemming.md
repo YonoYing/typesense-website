@@ -119,7 +119,7 @@ curl "http://localhost:8108/collections" -X POST \
 :::tip Understanding Stemming Options
 When configuring a field for stemming:
 
-1. Using `"stem": true` alone applies the default Porter stemmer algorithm
+1. Using `"stem": true` alone applies the Snowball stemmer for the field's locale
 1. Using `"stem_dictionary": "dictionary_name"` automatically enables stemming functionality (`"stem": true` is implied)
 1. When explicitly configuring both options on the same field, dictionary stemming takes precedence
 

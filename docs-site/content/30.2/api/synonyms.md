@@ -109,7 +109,7 @@ synonym_set = {
 }
 
 # Creates/updates a synonym set called `clothing-synonyms`
-client.synonym_sets["clothing-synonyms"].upsert(synonym_set)
+client.synonym_sets.upsert("clothing-synonyms", synonym_set)
 ```
 
   </template>
@@ -124,24 +124,15 @@ SynonymSetCreateSchema synonymSet = new SynonymSetCreateSchema();
 synonymSet.addItemsItem(synonymItem);
 
 // Creates/updates a synonym set called `clothing-synonyms`
-client.synonymSets("clothing-synonyms").upsert(synonymSet);
+client.synonymSet("clothing-synonyms").upsert(synonymSet);
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-synonymItem := &api.SynonymItemSchema{
-  ID:       "coat-synonyms",
-  Synonyms: []string{"blazer", "coat", "jacket"},
-}
-
-synonymSet := &api.SynonymSetCreateSchema{
-  Items: []*api.SynonymItemSchema{synonymItem},
-}
-
-// Creates/updates a synonym set called `clothing-synonyms`
-client.SynonymSets("clothing-synonyms").Upsert(context.Background(), synonymSet)
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -255,7 +246,7 @@ synonym_set = {
 }
 
 # Creates/updates a synonym set called `tech-synonyms`
-client.synonym_sets["tech-synonyms"].upsert(synonym_set)
+client.synonym_sets.upsert("tech-synonyms", synonym_set)
 ```
 
   </template>
@@ -271,25 +262,15 @@ SynonymSetCreateSchema synonymSet = new SynonymSetCreateSchema();
 synonymSet.addItemsItem(synonymItem);
 
 // Creates/updates a synonym set called `tech-synonyms`
-client.synonymSets("tech-synonyms").upsert(synonymSet);
+client.synonymSet("tech-synonyms").upsert(synonymSet);
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-synonymItem := &api.SynonymItemSchema{
-  ID:       "smart-phone-synonyms",
-  Root:     pointer.String("smart phone"),
-  Synonyms: []string{"iphone", "android"},
-}
-
-synonymSet := &api.SynonymSetCreateSchema{
-  Items: []*api.SynonymItemSchema{synonymItem},
-}
-
-// Creates/updates a synonym set called `tech-synonyms`
-_, _ = client.SynonymSets("tech-synonyms").Upsert(context.Background(), synonymSet)
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -387,14 +368,15 @@ client.synonym_sets["clothing-synonyms"].retrieve()
   <template v-slot:Java>
 
 ```java
-SynonymSet synonymSet = client.synonymSets("clothing-synonyms").retrieve();
+SynonymSetCreateSchema synonymSet = client.synonymSet("clothing-synonyms").retrieve();
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-client.SynonymSets("clothing-synonyms").Retrieve(context.Background())
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -469,14 +451,15 @@ client.synonym_sets.retrieve()
   <template v-slot:Java>
 
 ```java
-List<SynonymSetSchema> synonymSets = client.synonymSets().retrieve();
+SynonymSetSchema[] synonymSets = client.synonymSets().retrieve();
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-client.SynonymSets().Retrieve(context.Background())
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -553,14 +536,15 @@ client.synonym_sets["clothing-synonyms"].delete()
   <template v-slot:Java>
 
 ```java
-SynonymSetDeleteSchema result = client.synonymSets("clothing-synonyms").delete();
+SynonymSetDeleteSchema result = client.synonymSet("clothing-synonyms").delete();
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-client.SynonymSets("clothing-synonyms").Delete(context.Background())
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -647,7 +631,7 @@ synonymSetItem = {
 }
 
 // Creates/updates a synonym set called `tech-synonyms`
-client.synonymSets('tech-synonyms').items('smart-phone-synonyms').upsert(synonymSetItem)
+client.synonymSets('tech-synonyms').items().upsert('smart-phone-synonyms', synonymSetItem)
 
 ```
 
@@ -657,11 +641,18 @@ client.synonymSets('tech-synonyms').items('smart-phone-synonyms').upsert(synonym
 
 ```php
 $synonymSetItem = [
+  'id' => 'smart-phone-synonyms',
   'root' => 'smart phone',
   'synonyms' => ['iphone', 'android'],
 ];
 
-$client->synonymSets['tech-synonyms']->items['smart-phone-synonyms']->upsert($synonymSetItem);
+// typesense-php has no synonym set item API yet, so replace the item inside the whole set
+$items = array_filter(
+  $client->synonymSets['tech-synonyms']->retrieve()['items'],
+  fn($item) => $item['id'] !== 'smart-phone-synonyms'
+);
+$items[] = $synonymSetItem;
+$client->synonymSets['tech-synonyms']->upsert(['items' => array_values($items)]);
 ```
 
   </template>
@@ -675,7 +666,7 @@ synonymSetItem = {
 }
 
 # Creates/updates a synonym set called `tech-synonyms`
-client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].upsert(synonymSetItem)
+client.synonym_sets['tech-synonyms'].upsert_item('smart-phone-synonyms', synonymSetItem)
 ```
 
   </template>
@@ -684,12 +675,14 @@ client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].upsert(synony
 
 ```rb
 synonymSetItem = {
+  "id" => "smart-phone-synonyms",
   "root" => "smart phone",
   "synonyms" => ["iphone", "android"],
 }
 
-# Creates/updates a synonym set called `tech-synonyms`
-client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].upsert(synonymSetItem)
+# typesense-ruby has no synonym set item API yet, so replace the item inside the whole set
+items = client.synonym_sets['tech-synonyms'].retrieve["items"].reject { |item| item["id"] == "smart-phone-synonyms" }
+client.synonym_sets.upsert('tech-synonyms', { "items" => items + [synonymSetItem] })
 ```
 
   </template>
@@ -702,7 +695,11 @@ synonymSetItem.setId("smart-phone-synonyms");
 synonymSetItem.addSynonymsItem("iphone").addSynonymsItem("android");
 synonymSetItem.setRoot("smart phone");
 
-client.synonymSets("tech-synonyms").items("smart-phone-synonyms").upsert(synonymSetItem);
+// typesense-java has no synonym set item API yet, so replace the item inside the whole set
+SynonymSetCreateSchema synonymSet = client.synonymSet("tech-synonyms").retrieve();
+synonymSet.getItems().removeIf(item -> "smart-phone-synonyms".equals(item.getId()));
+synonymSet.addItemsItem(synonymSetItem);
+client.synonymSet("tech-synonyms").upsert(synonymSet);
 ```
 
   </template>
@@ -710,15 +707,8 @@ client.synonymSets("tech-synonyms").items("smart-phone-synonyms").upsert(synonym
   <template v-slot:Go>
 
 ```go
-synonymItem := &api.SynonymItemSchema{
-  ID:       "smart-phone-synonyms",
-  Root:     pointer.String("smart phone"),
-  Synonyms: []string{"iphone", "android"},
-}
-
-// Creates/updates a synonym set called `tech-synonyms`
-client.SynonymSets("tech-synonyms").Items("smart-phone-synonyms").Upsert(context.Background(), synonymItem)
-
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -757,35 +747,43 @@ client.synonymSets('tech-synonyms').items('smart-phone-synonyms').retrieve()
   <template v-slot:PHP>
 
 ```php
-$client->synonymSets['tech-synonyms']->items['smart-phone-synonyms']->retrieve();
+// typesense-php has no synonym set item API yet, so read the item from the whole set
+$items = $client->synonymSets['tech-synonyms']->retrieve()['items'];
+$synonymItem = array_column($items, null, 'id')['smart-phone-synonyms'] ?? null;
 ```
 
   </template>
   <template v-slot:Python>
 
 ```py
-client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].retrieve()
+client.synonym_sets['tech-synonyms'].get_item('smart-phone-synonyms')
 ```
 
   </template>
   <template v-slot:Ruby>
 
 ```rb
-client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].retrieve()
+# typesense-ruby has no synonym set item API yet, so read the item from the whole set
+client.synonym_sets['tech-synonyms'].retrieve["items"].find { |item| item["id"] == "smart-phone-synonyms" }
 ```
 
   </template>
   <template v-slot:Java>
 
 ```java
-SynonymItemSchema synonymItem = client.synonymSets("tech-synonyms").items("smart-phone-synonyms").retrieve();
+// typesense-java has no synonym set item API yet, so read the item from the whole set
+SynonymItemSchema synonymItem = client.synonymSet("tech-synonyms").retrieve().getItems().stream()
+    .filter(item -> "smart-phone-synonyms".equals(item.getId()))
+    .findFirst()
+    .orElse(null);
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-synonymItem, err := client.SynonymSets("tech-synonyms").Items("smart-phone-synonyms").Retrieve(context.Background())
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -819,35 +817,39 @@ client.synonymSets('tech-synonyms').items().retrieve()
   <template v-slot:PHP>
 
 ```php
-$client->synonymSets['tech-synonyms']->items->retrieve();
+// typesense-php has no synonym set item API yet, so read the items from the whole set
+$client->synonymSets['tech-synonyms']->retrieve()['items'];
 ```
 
   </template>
   <template v-slot:Python>
 
 ```py
-client.synonym_sets['tech-synonyms'].items().retrieve()
+client.synonym_sets['tech-synonyms'].list_items()
 ```
 
   </template>
   <template v-slot:Ruby>
 
 ```rb
-client.synonym_sets['tech-synonyms'].items().retrieve()
+# typesense-ruby has no synonym set item API yet, so read the items from the whole set
+client.synonym_sets['tech-synonyms'].retrieve["items"]
 ```
 
   </template>
   <template v-slot:Java>
 
 ```java
-SynonymItemSchema synonymItem = client.synonymSets("tech-synonyms").items().retrieve();
+// typesense-java has no synonym set item API yet, so read the items from the whole set
+List<SynonymItemSchema> synonymItems = client.synonymSet("tech-synonyms").retrieve().getItems();
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-synonymItem, err := client.SynonymSets("tech-synonyms").Items().Retrieve(context.Background())
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>
@@ -879,35 +881,46 @@ client.synonymSets('tech-synonyms').items('smart-phone-synonyms').delete()
   <template v-slot:PHP>
 
 ```php
-$client->synonymSets['tech-synonyms']->items['smart-phone-synonyms']->delete();
+// typesense-php has no synonym set item API yet, so remove the item from the whole set
+$items = array_filter(
+  $client->synonymSets['tech-synonyms']->retrieve()['items'],
+  fn($item) => $item['id'] !== 'smart-phone-synonyms'
+);
+$client->synonymSets['tech-synonyms']->upsert(['items' => array_values($items)]);
 ```
 
   </template>
   <template v-slot:Python>
 
 ```py
-client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].delete()
+client.synonym_sets['tech-synonyms'].delete_item('smart-phone-synonyms')
 ```
 
   </template>
   <template v-slot:Ruby>
 
 ```rb
-client.synonym_sets['tech-synonyms'].items['smart-phone-synonyms'].delete()
+# typesense-ruby has no synonym set item API yet, so remove the item from the whole set
+items = client.synonym_sets['tech-synonyms'].retrieve["items"].reject { |item| item["id"] == "smart-phone-synonyms" }
+client.synonym_sets.upsert('tech-synonyms', { "items" => items })
 ```
 
   </template>
   <template v-slot:Java>
 
 ```java
-client.synonymSets("tech-synonyms").items("smart-phone-synonyms").delete();
+// typesense-java has no synonym set item API yet, so remove the item from the whole set
+SynonymSetCreateSchema synonymSet = client.synonymSet("tech-synonyms").retrieve();
+synonymSet.getItems().removeIf(item -> "smart-phone-synonyms".equals(item.getId()));
+client.synonymSet("tech-synonyms").upsert(synonymSet);
 ```
 
   </template>
   <template v-slot:Go>
 
 ```go
-client.SynonymSets("tech-synonyms").Items("smart-phone-synonyms").Delete(context.Background())
+// typesense-go v3.2.0 does not support synonym sets yet.
+// Use the HTTP API instead (see the Shell tab).
 ```
 
   </template>

@@ -268,9 +268,7 @@ You'd display the `conversation.answer` key to your user, as the response to the
     {
       "facet_counts": [],
       "found": 10,
-      "hits": [
-        ...
-      ],
+      "hits": [],
       "out_of": 47,
       "page": 1,
       "request_params": {
@@ -383,7 +381,7 @@ type Store = {
   name: string
 }
 
-await test.multiSearch.perform<[Product, Store]>(
+await client.multiSearch.perform<[Product, Store]>(
   {
     searches: [
       {
@@ -475,9 +473,7 @@ This parameter causes Typesense to include prior context when communicating with
     {
       "facet_counts": [],
       "found": 10,
-      "hits": [
-        ...
-      ],
+      "hits": [],
       "out_of": 47,
       "page": 1,
       "request_params": {
