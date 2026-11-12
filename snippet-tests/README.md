@@ -40,7 +40,7 @@ The final report (console, run summary and the compatibility issue) counts **fin
 - Each audit row the run detects becomes a finding with the audit's id and severity (C1, K1...).
 - A failure on a block no audit row maps to joins an audit finding on the same page that already shows the same problem, as the audit's "and others" does (three more PHP alias statements missing `;` join AL3).
 - Anything left is a new finding, grouped by page and problem and numbered N1, N2... These are problems the audit does not list, most of them found by running the example against the server. Once confirmed, add them to the audit file so the next run reports them under their own id.
-- Audit rows the run did not detect are listed separately and not counted.
+- Audit rows on the examples the run checked that no longer show their problem are listed under "Fixed audit findings" and not counted.
 
 Below the table, the per-example counts (one result per example per language) stay for reference; they are higher than the number of findings, because one finding often covers several examples.
 
