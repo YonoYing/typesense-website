@@ -81,6 +81,7 @@ module.exports = {
     },
     'schema-prompt-cache': {
       // Guessed from the curl example: POST /collections/products/documents/search
+      skip: 'needs a natural language search model, which needs an LLM API key',
       async setup({ ensureCollection }) {
         await ensureCollection('products')
       },
