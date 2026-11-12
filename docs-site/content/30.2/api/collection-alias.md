@@ -433,7 +433,8 @@ let (collectionAlias, response) = try await client.aliases().delete(name: "compa
   <template v-slot:Shell>
 
 ```bash
-curl "http://localhost:8108/aliases/companies" -X DELETE \n    -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}"
+curl "http://localhost:8108/aliases/companies" -X DELETE \
+    -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}"
 ```
 
   </template>
