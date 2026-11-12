@@ -99,7 +99,7 @@ rule = {
   }
 }
 
-typesense.analytics.rules.create(rule)
+client.analytics.rules.create(rule)
 ```
 
   </template>
@@ -107,20 +107,17 @@ typesense.analytics.rules.create(rule)
   <template v-slot:Go>
 
 ```go
-rule := map[string]interface{}{
-  "name":       "homepage_popular_queries",
-  "type":       "popular_queries",
-  "collection": "products",
-  "event_type": "search",
-  "rule_tag":   "homepage",
-  "params": map[string]interface{}{
-    "destination_collection":  "product_queries",
-    "limit":                   100,
-    "capture_search_requests": true,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type, rule_tag or capture_search_requests
+rule := &api.AnalyticsRuleUpsertSchema{
+  Type: "popular_queries",
+  Params: api.AnalyticsRuleParameters{
+    Source:      api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+    Destination: api.AnalyticsRuleParametersDestination{Collection: "product_queries"},
+    Limit:       pointer.Int(100),
   },
 }
 
-_, err := client.Analytics().Rules().Create(context.Background(), rule)
+_, err := client.Analytics().Rules().Upsert(context.Background(), "homepage_popular_queries", rule)
 _ = err
 ```
 
@@ -223,7 +220,7 @@ rules = [
   }
 ]
 
-typesense.analytics.rules.create(rules)
+client.analytics.rules.create(rules)
 ```
 
   </template>
@@ -231,34 +228,31 @@ typesense.analytics.rules.create(rules)
   <template v-slot:Go>
 
 ```go
-rules := []map[string]interface{}{
-  {
-    "name":       "homepage_popular_queries",
-    "type":       "popular_queries",
-    "collection": "products",
-    "event_type": "search",
-    "rule_tag":   "homepage",
-    "params": map[string]interface{}{
-      "destination_collection":  "product_queries",
-      "limit":                   100,
-      "capture_search_requests": true,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type, rule_tag or capture_search_requests
+rules := map[string]*api.AnalyticsRuleUpsertSchema{
+  "homepage_popular_queries": {
+    Type: "popular_queries",
+    Params: api.AnalyticsRuleParameters{
+      Source:      api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+      Destination: api.AnalyticsRuleParametersDestination{Collection: "product_queries"},
+      Limit:       pointer.Int(100),
     },
   },
-  {
-    "name":       "homepage_nohits_queries",
-    "type":       "nohits_queries",
-    "collection": "products",
-    "event_type": "search",
-    "rule_tag":   "homepage",
-    "params": map[string]interface{}{
-      "destination_collection": "no_hits_queries",
-      "limit":                  100,
+  "homepage_nohits_queries": {
+    Type: "nohits_queries",
+    Params: api.AnalyticsRuleParameters{
+      Source:      api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+      Destination: api.AnalyticsRuleParametersDestination{Collection: "no_hits_queries"},
+      Limit:       pointer.Int(100),
     },
   },
 }
 
-_, err := client.Analytics().Rules().Create(context.Background(), rules)
-_ = err
+// typesense-go v3.2.0 has no batch create, so the rules are upserted one at a time
+for name, rule := range rules {
+  _, err := client.Analytics().Rules().Upsert(context.Background(), name, rule)
+  _ = err
+}
 ```
 
   </template>
@@ -391,7 +385,7 @@ client.Collections().Create(context.Background(), schema)
   <template v-slot:Python>
 
 ```python
-let schema = {
+schema = {
   "name": "product_queries",
   "fields": [
     {"name": "q", "type": "string" },
@@ -468,7 +462,7 @@ rule_configuration = {
   }
 }
 
-typesense.analytics.rules.upsert(rule_name, rule_configuration)
+client.analytics.rules[rule_name].update(rule_configuration)
 ```
 
   </template>
@@ -477,16 +471,14 @@ typesense.analytics.rules.upsert(rule_name, rule_configuration)
 
 ```go
 ruleName := "product_queries_aggregation"
-ruleConfiguration := map[string]interface{}{
-  "name":        ruleName,
-  "type":        "popular_queries",
-  "collection":  "products",
-  "event_type":  "search",
-  "params": map[string]interface{}{
-    "destination_collection":   "product_queries",
-    "expand_query":             false,
-    "limit":                    1000,
-    "capture_search_requests":  true,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type or capture_search_requests
+ruleConfiguration := &api.AnalyticsRuleUpsertSchema{
+  Type: "popular_queries",
+  Params: api.AnalyticsRuleParameters{
+    Source:      api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+    Destination: api.AnalyticsRuleParametersDestination{Collection: "product_queries"},
+    ExpandQuery: pointer.False(),
+    Limit:       pointer.Int(1000),
   },
 }
 
@@ -602,7 +594,7 @@ rule = {
   }
 }
 
-typesense.analytics.rules.create(rule)
+client.analytics.rules.create(rule)
 ```
 
   </template>
@@ -610,19 +602,17 @@ typesense.analytics.rules.create(rule)
   <template v-slot:Go>
 
 ```go
-rule := map[string]interface{}{
-  "name":       "product_queries_aggregation",
-  "type":       "popular_queries",
-  "collection": "products",
-  "event_type": "search",
-  "params": map[string]interface{}{
-    "destination_collection":  "product_queries",
-    "limit":                   1000,
-    "capture_search_requests": false,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type or capture_search_requests
+rule := &api.AnalyticsRuleUpsertSchema{
+  Type: "popular_queries",
+  Params: api.AnalyticsRuleParameters{
+    Source:      api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+    Destination: api.AnalyticsRuleParametersDestination{Collection: "product_queries"},
+    Limit:       pointer.Int(1000),
   },
 }
 
-_, err := client.Analytics().Rules().Create(context.Background(), rule)
+_, err := client.Analytics().Rules().Upsert(context.Background(), "product_queries_aggregation", rule)
 _ = err
 ```
 
@@ -703,7 +693,7 @@ event = {
   }
 }
 
-typesense.analytics.events.create(event)
+client.analytics.events.create(event)
 ```
 
   </template>
@@ -711,10 +701,10 @@ typesense.analytics.events.create(event)
   <template v-slot:Go>
 
 ```go
-event := map[string]interface{}{
-  "name":       "product_queries_aggregation",
-  "event_type": "search",
-  "data": map[string]interface{}{
+event := &api.AnalyticsEventCreateSchema{
+  Name: "product_queries_aggregation",
+  Type: "search",
+  Data: map[string]interface{}{
     "q":       "running shoes",
     "user_id": "1234",
   },
@@ -805,7 +795,7 @@ search_requests = {
     {
       'collection' => 'products',
       'q' => 'shoe',
-      'query_by' => 'q'
+      'query_by' => 'product_name'
     }
   ]
 }
@@ -841,7 +831,7 @@ client.MultiSearch.Perform(context.Background(), &api.MultiSearchParams{}, searc
   <template v-slot:Python>
 
 ```python
-let searchRequests = {
+searchRequests = {
   'searches': [
     {
       'collection': 'product_queries',
@@ -878,7 +868,7 @@ curl "http://localhost:8108/multi_search" \
             {
               "collection": "products",
               "q": "shoe",
-              "query_by": "q"
+              "query_by": "product_name"
             }
           ]
         }'
@@ -1059,7 +1049,7 @@ client.Collections().Create(context.Background(), schema)
     <template v-slot:Python>
 
 ```python
-let schema = {
+schema = {
   "name": "no_hits_queries",
   "fields": [
     {"name": "q", "type": "string" },
@@ -1132,7 +1122,7 @@ rule_configuration = {
   }
 }
 
-typesense.analytics.rules.upsert(rule_name, rule_configuration)
+client.analytics.rules[rule_name].update(rule_configuration)
 ```
 
   </template>
@@ -1141,14 +1131,13 @@ typesense.analytics.rules.upsert(rule_name, rule_configuration)
 
 ```go
 ruleName := "product_no_hits"
-ruleConfiguration := map[string]interface{}{
-  "name":        ruleName,
-  "type":        "nohits_queries",
-  "collection":  "products",
-  "event_type":  "search",
-  "params": map[string]interface{}{
-    "destination_collection": "no_hits_queries",
-    "limit": 1000,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type
+ruleConfiguration := &api.AnalyticsRuleUpsertSchema{
+  Type: "nohits_queries",
+  Params: api.AnalyticsRuleParameters{
+    Source:      api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+    Destination: api.AnalyticsRuleParametersDestination{Collection: "no_hits_queries"},
+    Limit:       pointer.Int(1000),
   },
 }
 
@@ -1261,7 +1250,7 @@ rule_configuration = {
     }
 }
 
-typesense.analytics.rules.upsert(rule_name, rule_configuration)
+client.analytics.rules[rule_name].update(rule_configuration)
 ```
 
   </template>
@@ -1270,15 +1259,15 @@ typesense.analytics.rules.upsert(rule_name, rule_configuration)
 
 ```go
 ruleName := "product_clicks"
-ruleConfiguration := map[string]interface{}{
-  "name":        ruleName,
-  "type":        "counter",
-  "collection":  "products",
-  "event_type":  "click",
-  "params": map[string]interface{}{
-    "destination_collection": "products",
-    "counter_field":          "popularity",
-    "weight":                 1,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type or weight
+ruleConfiguration := &api.AnalyticsRuleUpsertSchema{
+  Type: "counter",
+  Params: api.AnalyticsRuleParameters{
+    Source: api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+    Destination: api.AnalyticsRuleParametersDestination{
+      Collection:   "products",
+      CounterField: pointer.String("popularity"),
+    },
   },
 }
 
@@ -1338,14 +1327,14 @@ the `popularity` field by 1 every time a `click` event is sent to Typesense that
 ### Sending click events
 
 Once this counter rule is in-place, you can send start sending click events using the event name that we configured in the counter rule
-earlier (`products_click_counter`):
+earlier (`product_clicks`):
 
 <Tabs :tabs="['JavaScript','Ruby','Go','Python','Shell']">
   <template v-slot:JavaScript>
 
 ```js
 const event = {
-  name: "products_click_event",
+  name: "product_clicks",
   event_type: "click",
   data: {
     doc_id: "1024",
@@ -1362,7 +1351,7 @@ client.analytics.events().create(event)
 
 ```rb
 event = {
-  "name" => "products_click_event",
+  "name" => "product_clicks",
   "event_type" => "click",
   "data" => {
     "doc_id" => "1024",
@@ -1370,7 +1359,7 @@ event = {
   }
 }
 
-typesense.analytics.events.create(event)
+client.analytics.events.create(event)
 ```
 
   </template>
@@ -1378,10 +1367,10 @@ typesense.analytics.events.create(event)
   <template v-slot:Go>
 
 ```go
-event := map[string]interface{}{
-  "name":       "products_click_event",
-  "event_type": "click",
-  "data": map[string]interface{}{
+event := &api.AnalyticsEventCreateSchema{
+  Name: "product_clicks",
+  Type: "click",
+  Data: map[string]interface{}{
     "doc_id":  "1024",
     "user_id": "111112",
   },
@@ -1396,7 +1385,7 @@ client.Analytics().Events().Create(context.Background(), event)
 
 ```python
 event = {
-    "name": "products_click_event",
+    "name": "product_clicks",
     "event_type": "click",
     "data": {
         "doc_id": "1024",
@@ -1415,7 +1404,7 @@ curl "http://localhost:8108/analytics/events" -X POST \
      -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
      -d '{
             "event_type": "click",
-            "name": "products_click_event",
+            "name": "product_clicks",
             "data": {
                   "doc_id": "1024",
                   "user_id": "111112"
@@ -1509,7 +1498,7 @@ rules = [
   }
 ]
 
-typesense.analytics.rules.create(rules)
+client.analytics.rules.create(rules)
 ```
 
   </template>
@@ -1517,33 +1506,35 @@ typesense.analytics.rules.create(rules)
   <template v-slot:Go>
 
 ```go
-rules := []map[string]interface{}{
-  {
-    "name":       "product_clicks",
-    "type":       "counter",
-    "collection": "products",
-    "event_type": "click",
-    "params": map[string]interface{}{
-      "destination_collection": "products",
-      "counter_field":          "popularity",
-      "weight":                 1,
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type or weight
+rules := map[string]*api.AnalyticsRuleUpsertSchema{
+  "product_clicks": {
+    Type: "counter",
+    Params: api.AnalyticsRuleParameters{
+      Source: api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+      Destination: api.AnalyticsRuleParametersDestination{
+        Collection:   "products",
+        CounterField: pointer.String("popularity"),
+      },
     },
   },
-  {
-    "name":       "products_purchases",
-    "type":       "counter",
-    "collection": "products",
-    "event_type": "conversion",
-    "params": map[string]interface{}{
-      "destination_collection": "products",
-      "counter_field":          "popularity",
-      "weight":                 2,
+  "products_purchases": {
+    Type: "counter",
+    Params: api.AnalyticsRuleParameters{
+      Source: api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+      Destination: api.AnalyticsRuleParametersDestination{
+        Collection:   "products",
+        CounterField: pointer.String("popularity"),
+      },
     },
   },
 }
 
-_, err := client.Analytics().Rules().Create(context.Background(), rules)
-_ = err
+// typesense-go v3.2.0 has no batch create, so the rules are upserted one at a time
+for name, rule := range rules {
+  _, err := client.Analytics().Rules().Upsert(context.Background(), name, rule)
+  _ = err
+}
 ```
 
   </template>
@@ -1640,7 +1631,7 @@ event = {
   }
 }
 
-typesense.analytics.events.create(event)
+client.analytics.events.create(event)
 ```
 
   </template>
@@ -1648,9 +1639,10 @@ typesense.analytics.events.create(event)
 <template v-slot:Go>
 
 ```go
-event := map[string]interface{}{
-  "name":       "products_purchases",
-  "data": map[string]interface{}{
+event := &api.AnalyticsEventCreateSchema{
+  Name: "products_purchases",
+  Type: "conversion",
+  Data: map[string]interface{}{
     "doc_id":  "1022",
     "user_id": "111117",
   },
@@ -1666,8 +1658,8 @@ client.Analytics().Events().Create(context.Background(), event)
 event = {
     "name": "products_purchases",
     "data": {
-        "user_id": "1022",
-        "doc_id": "111117",
+        "doc_id": "1022",
+        "user_id": "111117",
     },
 }
 resp = client.analytics.events.create(event)
@@ -1699,7 +1691,7 @@ curl "http://localhost:8108/analytics/events" -X POST \
 ```js
 const event = {
   name: "product_clicks",
-  event_type: "conversion",
+  event_type: "click",
   data: {
     doc_id: "1022",
     user_id: "111117",
@@ -1722,7 +1714,7 @@ event = {
   }
 }
 
-typesense.analytics.events.create(event)
+client.analytics.events.create(event)
 ```
 
   </template>
@@ -1730,9 +1722,10 @@ typesense.analytics.events.create(event)
 <template v-slot:Go>
 
 ```go
-event := map[string]interface{}{
-  "name":       "product_clicks",
-  "data": map[string]interface{}{
+event := &api.AnalyticsEventCreateSchema{
+  Name: "product_clicks",
+  Type: "click",
+  Data: map[string]interface{}{
     "doc_id":  "1022",
     "user_id": "111117",
   },
@@ -1748,8 +1741,8 @@ client.Analytics().Events().Create(context.Background(), event)
 event = {
     "name": "product_clicks",
     "data": {
-        "user_id": "1022",
-        "doc_id": "111117",
+        "doc_id": "1022",
+        "user_id": "111117",
     },
 }
 resp = client.analytics.events.create(event)
@@ -1814,7 +1807,7 @@ rule_configuration = {
   'event_type' => 'click'
 }
 
-typesense.analytics.rules.upsert(rule_name, rule_configuration)
+client.analytics.rules[rule_name].update(rule_configuration)
 ```
 
   </template>
@@ -1823,11 +1816,12 @@ typesense.analytics.rules.upsert(rule_name, rule_configuration)
 
 ```go
 ruleName := "product_events_log"
-ruleConfiguration := map[string]interface{}{
-  "name":       ruleName,
-  "type":       "log",
-  "collection": "products",
-  "event_type": "click",
+// typesense-go v3.2.0 uses the pre-v30 rule shape: it has no field for event_type
+ruleConfiguration := &api.AnalyticsRuleUpsertSchema{
+  Type: "log",
+  Params: api.AnalyticsRuleParameters{
+    Source: api.AnalyticsRuleParametersSource{Collections: []string{"products"}},
+  },
 }
 
 client.Analytics().Rules().Upsert(context.Background(), ruleName, ruleConfiguration)
@@ -1903,7 +1897,7 @@ event = {
   }
 }
 
-typesense.analytics.events.create(event)
+client.analytics.events.create(event)
 ```
 
   </template>
@@ -1911,10 +1905,10 @@ typesense.analytics.events.create(event)
   <template v-slot:Go>
 
 ```go
-event := map[string]interface{}{
-  "name":       "product_events_log",
-  "event_type": "click",
-  "data": map[string]interface{}{
+event := &api.AnalyticsEventCreateSchema{
+  Name: "product_events_log",
+  Type: "click",
+  Data: map[string]interface{}{
     "doc_id":  "1024",
     "user_id": "111112",
   },
@@ -1970,10 +1964,10 @@ The listing API allows you to list all the analytics rules stored in your Typese
 
 ```js
 // Retrieve all rules
-typesense.analytics.rules().retrieve()
+client.analytics.rules().retrieve()
 
 // Optionally filter by rule_tag
-typesense.analytics.rules().retrieve({ rule_tag: 'homepage' })
+client.analytics.rules().retrieve('homepage')
 ```
 
   </template>
@@ -1982,10 +1976,10 @@ typesense.analytics.rules().retrieve({ rule_tag: 'homepage' })
 
 ```rb
 # Retrieve all rules
-typesense.analytics.rules.retrieve
+client.analytics.rules.retrieve
 
 # Optionally filter by rule_tag
-typesense.analytics.rules.retrieve(rule_tag: 'homepage')
+client.analytics.rules.retrieve.select { |rule| rule['rule_tag'] == 'homepage' }
 ```
 
   </template>
@@ -1996,8 +1990,7 @@ typesense.analytics.rules.retrieve(rule_tag: 'homepage')
 // Retrieve all rules
 client.Analytics().Rules().Retrieve(context.Background())
 
-// Optionally filter by rule_tag
-client.Analytics().Rules().Retrieve(context.Background(), map[string]interface{}{"rule_tag": "homepage"})
+// typesense-go v3.2.0 cannot filter by rule_tag: Retrieve takes only a context
 ```
 
   </template>
@@ -2043,7 +2036,7 @@ Removing an analytics rule will stop aggregation of new queries, but the already
   <template v-slot:JavaScript>
 
 ```js
-typesense.analytics.rules('product_queries_aggregation').delete()
+client.analytics.rules('product_queries_aggregation').delete()
 ```
 
   </template>
@@ -2051,7 +2044,7 @@ typesense.analytics.rules('product_queries_aggregation').delete()
   <template v-slot:Ruby>
 
 ```rb
-typesense.analytics.rules['product_queries_aggregation'].delete
+client.analytics.rules['product_queries_aggregation'].delete
 ```
 
   </template>
@@ -2068,7 +2061,7 @@ client.Analytics().Rule("product_queries_aggregation").Delete(context.Background
   <template v-slot:Python>
 
 ```python
-client.analytics.rules('product_queries_aggregation').delete()
+client.analytics.rules['product_queries_aggregation'].delete()
 ```
 
   </template>
@@ -2076,7 +2069,7 @@ client.analytics.rules('product_queries_aggregation').delete()
   <template v-slot:Shell>
 
 ```bash
-curl -k "http://localhost:8108/analytics/rules/product_queries_aggregation"
+curl -k "http://localhost:8108/analytics/rules/product_queries_aggregation" \
       -X DELETE \
       -H "Content-Type: application/json" \
       -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}"
@@ -2113,7 +2106,7 @@ const events = await client.analytics.events().retrieve(params)
   <template v-slot:Ruby>
 
 ```rb
-events = typesense.analytics.events.retrieve(user_id: '1234', name: 'product_queries_aggregation', n: 10)
+events = client.analytics.events.retrieve(user_id: '1234', name: 'product_queries_aggregation', n: 10)
 ```
 
   </template>
@@ -2121,7 +2114,7 @@ events = typesense.analytics.events.retrieve(user_id: '1234', name: 'product_que
   <template v-slot:Go>
 
 ```go
-events, err := client.Analytics().Events().Retrieve(context.Background(), "1234", "product_queries_aggregation", 10)
+// typesense-go v3.2.0 has no method to retrieve analytics events; use the HTTP request shown in the Shell tab
 ```
 
   </template>

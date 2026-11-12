@@ -32,7 +32,8 @@ curl "http://localhost:8108/multi_search" \
           "searches": [
             {
               "collection": "companies",
-              "q": "Acme"
+              "q": "Acme",
+              "query_by": "company_name"
             }
           ]
         }'
@@ -71,10 +72,10 @@ client.aliases().upsert('companies', aliased_collection)
 ```php
 $aliasedCollection = [
   'collection_name' => 'companies_june11'
-]
+];
 
 # Creates/updates an alias called `companies` to the `companies_june11` collection
-$client->aliases->upsert('companies', $aliasedCollection)
+$client->aliases->upsert('companies', $aliasedCollection);
 ```
 
   </template>
@@ -110,7 +111,7 @@ final aliasedCollection = {
 };
 
 // Creates/updates an alias called `companies` to the `companies_june11` collection
-await client.aliases.upsert('companies', aliased_collection);
+await client.aliases.upsert('companies', aliasedCollection);
 ```
 
   </template>
@@ -167,7 +168,7 @@ curl "http://localhost:8108/aliases/companies" -X PUT \
 ```json
 {
   "name": "companies",
-  "collection_name": "companies_june11",
+  "collection_name": "companies_june11"
 }
 ```
 
@@ -197,7 +198,7 @@ client.aliases('companies').retrieve()
   <template v-slot:PHP>
 
 ```php
-$client->aliases['companies']->retrieve()
+$client->aliases['companies']->retrieve();
 ```
 
   </template>
@@ -225,7 +226,7 @@ await client.alias('companies').retrieve();
   <template v-slot:Java>
 
 ```java
-CollectionAliasSchema collectionAlias = client.aliases("companies").retrieve();
+CollectionAlias collectionAlias = client.aliases("companies").retrieve();
 ```
 
   </template>
@@ -262,7 +263,7 @@ curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
 ```json
 {
   "name": "companies",
-  "collection_name": "companies_june11",
+  "collection_name": "companies_june11"
 }
 ```
 
@@ -287,7 +288,7 @@ client.aliases().retrieve()
   <template v-slot:PHP>
 
 ```php
-$client->aliases->retrieve()
+$client->aliases->retrieve();
 ```
 
   </template>
@@ -383,7 +384,7 @@ client.aliases('companies').delete()
   <template v-slot:PHP>
 
 ```php
-$client->aliases['companies']->delete()
+$client->aliases['companies']->delete();
 ```
 
   </template>
@@ -411,7 +412,7 @@ await client.alias('companies').delete();
   <template v-slot:Java>
 
 ```java
-CollectionAliasSchema collectionAlias = client.aliases("companies").delete();
+CollectionAlias collectionAlias = client.aliases("companies").delete();
 ```
 
   </template>
@@ -432,7 +433,7 @@ let (collectionAlias, response) = try await client.aliases().delete(name: "compa
   <template v-slot:Shell>
 
 ```bash
-curl "http://localhost:8108/aliases/companies" -X DELETE
+curl "http://localhost:8108/aliases/companies" -X DELETE \
     -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}"
 ```
 

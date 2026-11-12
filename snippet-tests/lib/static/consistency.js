@@ -142,6 +142,7 @@ function collectionsIn(code, lang) {
   add(new RegExp(`\\bcollection\\(name:\\s*${STR}\\s*\\)`, 'g')) // swift
   add(new RegExp(`["']?collection["']?\\s*(?:=>|:)\\s*(?:pointer\\.\\w+\\()?${STR}`, 'g')) // search bodies
   add(new RegExp(`\\bCollection:\\s*(?:pointer\\.\\w+\\()?${STR}`, 'g')) // go structs
+  add(new RegExp(`\\bCollections:\\s*\\[\\]string\\{\\s*${STR}`, 'g')) // go analytics rule source
   add(new RegExp(`["']?(?:destination_collection|source_collection)["']?\\s*(?:=>|:)\\s*${STR}`, 'g'))
   return [...new Set(names.filter(n => !/[$*{}]/.test(n)))]
 }
@@ -228,8 +229,10 @@ function pairsIn(code, lang) {
   if (lang === 'go') {
     // Struct fields: Key: pointer.String("v") / Key: "v" / Key: 1
     for (const m of code.matchAll(new RegExp(`\\b([A-Z]\\w*):\\s*(?:pointer\\.\\w+\\()?${VALUE}`, 'g'))) {
-      const key = m[1].replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
-      push(key, m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4])
+      let key = m[1].replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+      // An analytics rule's Destination{Collection: ...} is its destination_collection.
+      if (key === 'collection' && /Destination\{\s*$/.test(code.slice(0, m.index + m[0].indexOf(m[1])))) key = 'destination_collection'
+      push(key,m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4])
     }
   }
   if (lang === 'shell') {

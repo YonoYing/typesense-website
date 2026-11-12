@@ -43,13 +43,16 @@ module.exports = {
     },
     'returning-the-id-of-the-imported-documents': {
       // Guessed from the curl example: POST /collections/companies/documents/import?return_id
-      async setup({ fixtures, ensureCollection, writeFile, toJsonl }) {
-        await ensureCollection('companies')
+      // The import uses the default "create" action, so start from an empty
+      // collection (ensureCollection would load the same fixture documents).
+      async setup({ fixtures, createCollection, writeFile, toJsonl }) {
+        await createCollection(fixtures.companies.schema)
         writeFile('documents.jsonl', toJsonl(fixtures.companies.documents))
       },
-      async verify({ assert, expectExists }) {
+      async verify({ assert, expectExists, responses }) {
         const collection = await expectExists('/collections/companies')
         assert.ok(collection.num_documents > 0, 'expected documents to be imported')
+        assert.ok(responses.some(r => r && r.success === true && r.id !== undefined), 'expected return_id to add the id to each line')
       },
     },
     'configure-batch-size': {

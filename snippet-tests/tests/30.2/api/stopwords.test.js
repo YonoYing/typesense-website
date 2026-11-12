@@ -5,6 +5,11 @@
 // run top to bottom against a fresh Typesense server, once per language.
 // See snippet-tests/README.md for everything a test can do.
 
+// The set the page creates in "Adding stopwords" and uses from then on.
+async function ensureStopwordSet({ api }) {
+  await api.put('/stopwords/stopword_set1', { stopwords: ['Germany', 'France'], locale: 'en' })
+}
+
 module.exports = {
   snippets: {
     'adding-stopwords': {
@@ -15,7 +20,11 @@ module.exports = {
       },
     },
     'using-stopwords-during-search': {
-      // Guessed from the curl example: POST /multi_search
+      // The example searches a "books" collection the page never creates.
+      async setup(ctx) {
+        await ensureStopwordSet(ctx)
+        await ctx.ensureCollection('books', { name: 'books', fields: [{ name: 'title', type: 'string' }] })
+      },
       async verify({ assert, response }) {
         assert.ok(Array.isArray(response.results), 'expected one result per search')
       },
@@ -25,19 +34,19 @@ module.exports = {
       // No specific check guessed: the example passes if it runs without errors.
     },
     'get-a-specific-stopwords-set': {
-      // Guessed from the curl example: GET /stopwords/countries
-      // The page creates "stopword_set1" but reads back "countries", so make it here.
-      async setup({ api }) {
-        await api.put('/stopwords/countries', { stopwords: ['Germany', 'France'], locale: 'en' })
+      // GET /stopwords/stopword_set1
+      async setup(ctx) {
+        await ensureStopwordSet(ctx)
       },
       async verify({ assert, response }) {
-        assert.equal(response.stopwords.id, 'countries')
+        assert.equal(response.stopwords.id, 'stopword_set1')
       },
     },
     'updating-stopwords': {
-      // Guessed from the curl example: PUT /stopwords/countries
-      async verify({ expectExists }) {
-        await expectExists('/stopwords/countries')
+      // PUT /stopwords/stopword_set1
+      async verify({ assert, api }) {
+        const res = await api.get('/stopwords/stopword_set1')
+        assert.deepEqual(res.body.stopwords.stopwords.slice().sort(), ['france', 'germany', 'italy'])
       },
     },
   },

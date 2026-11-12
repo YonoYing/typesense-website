@@ -383,7 +383,8 @@ const RULES = {
       re: /\bAnalytics\(\)\.(?:Rules|Events)\(\)\.\w+\(/,
       message: 'the Go client takes typed structs for analytics (api.AnalyticsRuleUpsertSchema, api.AnalyticsEventCreateSchema), not map[string]interface{}: compile error',
       fix: 'client.Analytics().Rules().Upsert(ctx, name, &api.AnalyticsRuleUpsertSchema{...})',
-      when: code => /map\[string\]interface\{\}/.test(code),
+      // An event's Data field really is map[string]interface{}; only other maps are wrong.
+      when: code => /map\[string\]interface\{\}/.test(code.replace(/\bData:\s*map\[string\]interface\{\}/g, '')),
     },
     {
       id: 'go-analytics-rules-create',

@@ -187,7 +187,6 @@ When a `string[]` field is queried, the `highlights` structure will include the 
 
 ```json
 {
-      ...
       "highlights": [
         {
           "field": "addresses",
@@ -201,8 +200,7 @@ When a `string[]` field is queried, the `highlights` structure will include the 
             ["Malibu", "Malibu"]
           ]
         }
-      ],
-      ...
+      ]
 }
 ```
 
@@ -359,11 +357,11 @@ Note that you need to enable faceting for fields in the [Collection Schema](./co
 
 ```json{4}
 {
-  fields: [
+  "fields": [
     {
-      facet: true,
-      name: "<field>",
-      type: "<datatype>"
+      "facet": true,
+      "name": "<field>",
+      "type": "<datatype>"
     }
   ]
 }
@@ -421,9 +419,11 @@ $<collection>(<facet_field1>, <facet_field2>, ...)
 For example, for searching in `products` collection and referencing facet field in `customers` collection, we can pass the search query like following,
 
 ```shell
-curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}"\
-"http://localhost:8108/collections/products/documents/search\
-?q=*&filter_by=$Customers(customer_id: customer_a)&facet_by=$Customers(product_price)"
+curl -G -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+"http://localhost:8108/collections/products/documents/search" \
+--data-urlencode 'q=*' \
+--data-urlencode 'filter_by=$Customers(customer_id: customer_a)' \
+--data-urlencode 'facet_by=$Customers(product_price)'
 ```
 Note: Facet referencing won't work if all of the following are true:
   * No filter references are available.
@@ -609,11 +609,11 @@ You can use decay functions in the `sort_by` parameter with the following syntax
 Let's say you have a collection of products with timestamps and want to sort them giving preference to items closer to a specific date:
 
 ```bash
-curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
-"http://localhost:8108/collections/products/documents/search\
-?q=smartphone\
-&query_by=product_name\
-&sort_by=timestamp(origin: 1728385250, func: gauss, scale: 1000, decay: 0.5):desc"
+curl -G -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+"http://localhost:8108/collections/products/documents/search" \
+--data-urlencode 'q=smartphone' \
+--data-urlencode 'query_by=product_name' \
+--data-urlencode 'sort_by=timestamp(origin: 1728385250, func: gauss, scale: 1000, decay: 0.5):desc'
 ```
 
 For a dataset with these records:
@@ -1007,7 +1007,7 @@ Let's create a preset with name `listing_view`.
 ```js
   await client.presets().upsert("listing_view", {
     value: {
-      collection: "products", q: "*", sort_by: "popularity",
+      collection: "products", q: "*", sort_by: "popularity:desc",
     },
   });
 ```
@@ -1018,7 +1018,7 @@ Let's create a preset with name `listing_view`.
 ```dart
   await client.presets.upsert('listing_view', {
     'value': {
-      'collection': 'products', 'q': '*','sort_by': 'popularity'
+      'collection': 'products', 'q': '*','sort_by': 'popularity:desc'
     }
   });
 ```
@@ -1033,12 +1033,12 @@ preset.Value.FromMultiSearchSearchesParameter(api.MultiSearchSearchesParameter{
     {
       Collection: pointer.Any("products"),
       Q:          pointer.Any("*"),
-      SortBy:     pointer.Any("popularity"),
+      SortBy:     pointer.Any("popularity:desc"),
     },
   },
 })
 
-client.Presets().Upsert(context.Background(), "listing-view", preset)
+client.Presets().Upsert(context.Background(), "listing_view", preset)
 ```
 
   </template>
@@ -1052,7 +1052,7 @@ curl "http://localhost:8108/presets/listing_view" -X PUT \
           "value": {
             "collection": "products",
             "q": "*",
-            "sort_by": "popularity"
+            "sort_by": "popularity:desc"
           }
         }'
 ```
@@ -1143,15 +1143,11 @@ await client.multiSearch.perform(searchRequests, queryParams: {});
   <template v-slot:Java>
 
 ```java
-HashMap<String,String > search1 = new HashMap<>();
+MultiSearchCollectionParameters search1 = new MultiSearchCollectionParameters();
+search1.setPreset("listing_view");
 
-search1.put("preset","listing_view");
-
-List<HashMap<String, String>> searches = new ArrayList<>();
-searches.add(search1);
-
-HashMap<String, List<HashMap<String ,String>>> searchRequests = new HashMap<>();
-searchRequests.put("searches",searches);
+MultiSearchSearchesParameter searchRequests = new MultiSearchSearchesParameter()
+    .addSearchesItem(search1);
 
 HashMap<String,String> commonSearchParams = new HashMap<>();
 
@@ -1165,7 +1161,7 @@ client.multiSearch.perform(searchRequests, commonSearchParams);
 searchRequests := api.MultiSearchSearchesParameter{
   Searches: []api.MultiSearchCollectionParameters{
     {
-      Preset: "listing_view"
+      Preset: pointer.String("listing_view"),
     },
   },
 }
@@ -1205,7 +1201,7 @@ The `value` key in the preset configuration can also match the search parameters
         {
           collection: "products",
           q: "*",
-          sort_by: "popularity",
+          sort_by: "popularity:desc",
         },
         {
           collection: "blog_posts",

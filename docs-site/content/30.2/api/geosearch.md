@@ -141,7 +141,7 @@ await client.collections.create(schema);
 ```java
 CollectionSchema collectionSchema = new CollectionSchema();
 
-collectionschema.name("places")
+collectionSchema.name("places")
                 .addFieldsItem(new Field().name("title").type("string"))
                 .addFieldsItem(new Field().name("points").type("int32"))
                 .addFieldsItem(new Field().name("location").type("geopoint"))
@@ -180,7 +180,7 @@ client.Collections().Create(context.Background(), schema)
   <template v-slot:Shell>
 
 ```bash
-curl -k "http://localhost:8108/collections" -X POST
+curl -k "http://localhost:8108/collections" -X POST \
       -H "Content-Type: application/json" \
       -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" -d '{
         "name": "places",
@@ -263,7 +263,7 @@ final document = {
   'location': [48.86093481609114, 2.33698396872901]
 };
 
-await client.collection('places').documents.create(document};
+await client.collection('places').documents.create(document);
 ```
 
   </template>
@@ -271,14 +271,14 @@ await client.collection('places').documents.create(document};
   <template v-slot:Java>
 
 ```java
-HaashMap<String, Object> document = new HashMap<>();
-float[] location =  {48.86093481609114, 2.33698396872901}
+HashMap<String, Object> document = new HashMap<>();
+double[] location = {48.86093481609114, 2.33698396872901};
 
-document.add("title", "Louvre Museuem");
-document.add("points", 1);
-document.add("location", location);
+document.put("title", "Louvre Museuem");
+document.put("points", 1);
+document.put("location", location);
 
-client.collection("places").documents.create(document);
+client.collections("places").documents().create(document);
 ```
 
   </template>
@@ -287,12 +287,12 @@ client.collection("places").documents.create(document);
 
 ```go
 document := struct {
-  Title    int       `json:"title"`
+  Title    string    `json:"title"`
   Points   int       `json:"points"`
   Location []float64 `json:"location"`
 }{
-  Title:    1984,
-  Points:   100,
+  Title:    "Louvre Museuem",
+  Points:   1,
   Location: []float64{48.86093481609114, 2.33698396872901},
 }
 
@@ -336,7 +336,7 @@ let searchParameters = {
   'sort_by'   : 'location(48.853, 2.344):asc'
 }
 
-client.collections('companies').documents().search(searchParameters)
+client.collections('places').documents().search(searchParameters)
 ```
 
   </template>
@@ -351,7 +351,7 @@ $searchParameters = [
   'sort_by'   => 'location(48.853, 2.344):asc'
 ];
 
-$client->collections['companies']->documents->search($searchParameters);
+$client->collections['places']->documents->search($searchParameters);
 ```
 
   </template>
@@ -366,7 +366,7 @@ search_parameters = {
   'sort_by'   : 'location(48.853, 2.344):asc'
 }
 
-client.collections['companies'].documents.search(search_parameters)
+client.collections['places'].documents.search(search_parameters)
 ```
 
   </template>
@@ -381,7 +381,7 @@ search_parameters = {
   'sort_by'   => 'location(48.853, 2.344):asc'
 }
 
-client.collections['companies'].documents.search(search_parameters)
+client.collections['places'].documents.search(search_parameters)
 ```
 
   </template>
@@ -395,7 +395,7 @@ final searchParameters = {
   'sort_by'   : 'location(48.853, 2.344):asc'
 };
 
-client.collections('companies').documents().search(searchParameters)
+await client.collection('places').documents.search(searchParameters);
 ```
 
   </template>
@@ -431,7 +431,7 @@ client.Collection("places").Documents().Search(context.Background(), searchParam
 curl -G -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
   --data-urlencode 'q=*' \
   --data-urlencode 'query_by=title' \
-  --data-urlencode 'filter_by=location:(48.853,2.344,5.1 km)' \
+  --data-urlencode 'filter_by=location:(48.90615915923891, 2.3435897727061175, 5.1 km)' \
   --data-urlencode 'sort_by=location(48.853, 2.344):asc' \
 'http://localhost:8108/collections/places/documents/search'
 ```
@@ -451,7 +451,7 @@ curl -G -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
   "hits": [
     {
       "document": {
-        "id": 0,
+        "id": "0",
         "location": [48.86093481609114, 2.33698396872901],
         "points": 1,
         "title": "Louvre Museuem"
@@ -543,9 +543,10 @@ You can search for documents whose polygon areas contain a specific point:
   <template v-slot:Shell>
 
 ```bash
-curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
-     "http://localhost:8108/collections/territories/documents/search\
-      ?q=*&filter_by=area:(0.5, 0.5)"
+curl -G -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+     "http://localhost:8108/collections/territories/documents/search" \
+     --data-urlencode 'q=*' \
+     --data-urlencode 'filter_by=area:(0.5, 0.5)'
 ```
 
   </template>

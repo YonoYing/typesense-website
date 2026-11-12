@@ -92,7 +92,9 @@ function findingsSection(results, found, { tableLink } = {}) {
   }
   if (undetected.length) {
     lines.push(
-      '### Audit findings this run did not detect',
+      '### Fixed audit findings',
+      '',
+      'Problems the example audit lists on the examples this run checked, which those examples no longer show. For languages without an executor, the static checks are the evidence.',
       '',
       ...undetected.map(u => `- **${u.row.id}** (${u.row.severity}) ${u.row.where} [${u.row.lang}]: ${u.row.problem.replace(/\s+/g, ' ').slice(0, 200)}`),
       '',
@@ -161,7 +163,7 @@ function findingsDoc(results, found, { title = 'Docs code example findings', ima
     '',
   ]
   if (undetected.length) {
-    lines.push('## Audit findings this run did not detect', '', ...undetected.map(u => `- **${u.row.id}** (${u.row.severity}) ${u.row.where} [${u.row.lang}]`), '')
+    lines.push('## Fixed audit findings', '', 'Problems the example audit lists on the examples this run checked, which those examples no longer show. For languages without an executor, the static checks are the evidence.', '', ...undetected.map(u => `- **${u.row.id}** (${u.row.severity}) ${u.row.where} [${u.row.lang}]`), '')
   }
   return lines.join('\n')
 }

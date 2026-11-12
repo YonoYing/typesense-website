@@ -31,7 +31,7 @@ Languages without an executor get a result from the static checks alone. For Jav
 
 Beyond client code, the page itself is checked: every JSON or JSON Lines block (sample responses, request bodies, schema fragments) must be valid JSON with sane keys, document ids that are strings and a version that matches the docs version; prose must not link to a doubled `##` anchor, number a list item twice or contradict itself (a fact table in `lib/static/docs.js`); code comments must not name a resource the code no longer uses; and fields in `include_fields`, `query_by`, `sort_by` and friends must exist in the schema the page creates (or the shared `companies` schema). These results use the languages `json` and `prose`.
 
-`audit/` holds an independent review of the 30.2 examples, and it is the source of truth for what is wrong. `node bin/audit.js` maps every one of its 127 findings (BREAK, WRONG and COSMETIC) to its code block, JSON block or prose section and checks that the harness flags it; the self-test runs it, so a change to the checks cannot silently stop catching a known problem. `--extra` lists flagged blocks the review does not mention, to look for false positives.
+`audit/` holds an independent review of the 30.2 examples, and it is the source of truth for what is wrong. `node bin/audit.js` maps every one of its 127 findings (BREAK, WRONG and COSMETIC) to its code block, JSON block or prose section and checks that the harness flags it; the self-test runs it, so a change to the checks cannot silently stop catching a known problem. Once an example is fixed it no longer shows the audited problem, so the self-test runs the cross-check against the docs as they were when the audit was written (the commit `AUDIT_DOCS_REF` in `lib/config.js`, read with `git archive`; set `SNIPPET_DOCS_ROOT` to point the harness at any other copy of the docs). Against the current docs, `node bin/audit.js` shows which audited problems are still there. `--extra` lists flagged blocks the review does not mention, to look for false positives.
 
 ### The report
 
@@ -40,7 +40,7 @@ The final report (console, run summary and the compatibility issue) counts **fin
 - Each audit row the run detects becomes a finding with the audit's id and severity (C1, K1...).
 - A failure on a block no audit row maps to joins an audit finding on the same page that already shows the same problem, as the audit's "and others" does (three more PHP alias statements missing `;` join AL3).
 - Anything left is a new finding, grouped by page and problem and numbered N1, N2... These are problems the audit does not list, most of them found by running the example against the server. Once confirmed, add them to the audit file so the next run reports them under their own id.
-- Audit rows the run did not detect are listed separately and not counted.
+- Audit rows on the examples the run checked that no longer show their problem are listed under "Fixed audit findings" and not counted.
 
 Below the table, the per-example counts (one result per example per language) stay for reference; they are higher than the number of findings, because one finding often covers several examples.
 

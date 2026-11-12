@@ -22,7 +22,29 @@ module.exports = {
       // No API call recognised. The example only has to run without errors.
     },
     'facet-referencing--2': {
-      // No API call recognised. The example only has to run without errors.
+      // GET /collections/products/documents/search with a $Customers(...) filter
+      // and facet: needs a "Customers" collection that references "products".
+      async setup({ createCollection, importDocuments, dropCollection }) {
+        await dropCollection('Customers')
+        await createCollection({ name: 'products', fields: [{ name: 'product_name', type: 'string' }] })
+        await importDocuments('products', [{ id: 'p1', product_name: 'Phone' }, { id: 'p2', product_name: 'Laptop' }])
+        await createCollection({
+          name: 'Customers',
+          fields: [
+            { name: 'customer_id', type: 'string' },
+            { name: 'product_price', type: 'float', facet: true },
+            { name: 'product_id', type: 'string', reference: 'products.id' },
+          ],
+        })
+        await importDocuments('Customers', [
+          { id: 'c1', customer_id: 'customer_a', product_price: 100, product_id: 'p1' },
+          { id: 'c2', customer_id: 'customer_b', product_price: 900, product_id: 'p2' },
+        ])
+      },
+      async verify({ assert, response }) {
+        assert.equal(response.found, 1, "expected only customer_a's product")
+        assert.ok(Array.isArray(response.facet_counts) && response.facet_counts.length, 'expected facet counts from Customers')
+      },
     },
     'sorting-null-empty-or-missing-values': {
       // No API call recognised. The example only has to run without errors.
@@ -31,13 +53,29 @@ module.exports = {
       // No API call recognised. The example only has to run without errors.
     },
     'example': {
-      // Guessed from the curl example: GET /collections/products/documents/search?q&query_by&sort_by
-      async setup({ ensureCollection }) {
-        await ensureCollection('products')
+      // GET /collections/products/documents/search with a decay function sort:
+      // the page's sample records, with product_name and timestamp.
+      async setup({ createCollection, importDocuments, dropCollection }) {
+        await dropCollection('Customers')
+        await createCollection({
+          name: 'products',
+          fields: [
+            { name: 'product_name', type: 'string' },
+            { name: 'timestamp', type: 'int64' },
+          ],
+        })
+        await importDocuments('products', [
+          { product_name: 'Samsung Smartphone', timestamp: 1728383250 },
+          { product_name: 'Vivo Smartphone', timestamp: 1728384250 },
+          { product_name: 'Oneplus Smartphone', timestamp: 1728385250 },
+          { product_name: 'Pixel Smartphone', timestamp: 1728386250 },
+          { product_name: 'Moto Smartphone', timestamp: 1728387250 },
+        ])
       },
       async verify({ assert, response }) {
-        assert.ok(Array.isArray(response.hits), 'expected search hits')
-        assert.equal(typeof response.found, 'number')
+        assert.ok(Array.isArray(response.hits) && response.hits.length, 'expected search hits')
+        // The page says the record at the origin ranks first.
+        assert.equal(response.hits[0].document.product_name, 'Oneplus Smartphone')
       },
     },
     'group-results': {
@@ -53,8 +91,9 @@ module.exports = {
     },
     'presets': {
       // Guessed from the curl example: PUT /presets/listing_view
-      async setup({ createCollection, importDocuments }) {
+      async setup({ createCollection, importDocuments, dropCollection }) {
         // The preset sorts products by popularity.
+        await dropCollection('Customers')
         await createCollection({
           name: 'products',
           fields: [

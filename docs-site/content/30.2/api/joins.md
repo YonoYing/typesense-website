@@ -39,7 +39,8 @@ curl "http://localhost:8108/multi_search" -X POST \
                 {
                   "collection": "books",
                   "include_fields": "$authors(first_name,last_name)",
-                  "q": "famous"
+                  "q": "famous",
+                  "query_by": "title"
                 }
               ]
             }'
@@ -79,7 +80,7 @@ Let's say we want to query the `authors` collection and get the related books of
   "collection": "authors",
   "q": "query",
   "filter_by": "$books(id: *)",
-  "include_fields": "$books(*)",
+  "include_fields": "$books(*)"
 }
 ```
 
@@ -223,8 +224,7 @@ many users and a given user can access many documents.
 
 To do this, we can create three collections: `documents`, `users` and `user_doc_access` with the following schemas:
 
-```json{20-21}
-
+```json
 {
   "name":  "documents",
   "fields": [
@@ -233,6 +233,9 @@ To do this, we can create three collections: `documents`, `users` and `user_doc_
     {"name": "content", "type": "string"}
   ]
 }
+```
+
+```json
 {
   "name":  "users",
   "fields": [
@@ -240,11 +243,14 @@ To do this, we can create three collections: `documents`, `users` and `user_doc_
     {"name": "username", "type": "string"}
   ]
 }
+```
+
+```json{4-5}
 {
   "name":  "user_doc_access",
   "fields": [
     {"name": "user_id", "type": "string", "reference": "users.id"},
-    {"name": "document_id", "type": "string", "reference": "documents.id"},
+    {"name": "document_id", "type": "string", "reference": "documents.id"}
   ]
 }
 ```
@@ -364,8 +370,8 @@ objects, even if there is only a single match.
 For example, given the following authors and books:
 
 ```json lines
-{"id": "0", ",first_name": "Enid", "last_name": "Blyton"}
-{"id": "1", ",first_name": "JK", "last_name": "Rowling"}
+{"id": "0", "first_name": "Enid", "last_name": "Blyton"}
+{"id": "1", "first_name": "JK", "last_name": "Rowling"}
 ```
 
 ```json lines

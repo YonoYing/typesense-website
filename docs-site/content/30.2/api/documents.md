@@ -261,7 +261,7 @@ HashMap<String, Object> document = new HashMap<>();
 
 document.put("id","124");
 document.put("company_name","Stark Industries");
-dpocument.put("num_employees",5215);
+document.put("num_employees",5215);
 document.put("country","USA");
 
 client.collections("companies").documents().upsert(document);
@@ -506,7 +506,7 @@ importDocumentsParameters.action("create");
 // IMPORTANT: Be sure to increase connectionTimeout to at least 5 minutes or more for imports,
 //  when instantiating the client
 
-client.collections("Countries").documents().import_(documentList, importDocumentsParameters);
+client.collections("companies").documents().import_(documentList, importDocumentsParameters);
 ```
 
   </template>
@@ -636,9 +636,11 @@ you can use the `return_id` parameter.
 # Makes the import response return the `id` field of imported documents in the response
 curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" -X POST --data-binary @documents.jsonl \
 'http://localhost:8108/collections/companies/documents/import?return_id=true'
+```
+
+```json lines
 {"success": true, "id": "0"}
 {"success": true, "id": "1"}
-...
 ```
 
 Likewise, using the `return_doc` parameter will return the entire document back in response.
@@ -666,7 +668,7 @@ client.collections('companies').documents().import(documentsInJsonl, {batch_size
 
 ```php
 $documentsInJsonl = file_get_contents('documents.jsonl');
-client.collections['companies'].documents.import($documentsInJsonl, ['batch_size' => 100]);
+$client->collections['companies']->documents->import($documentsInJsonl, ['batch_size' => 100]);
 ```
 
   </template>
@@ -682,7 +684,7 @@ with open('documents.jsonl') as jsonl_file:
 
 ```rb
 documents_jsonl = File.read('documents.jsonl')
-collections['companies'].documents.import(documents_jsonl, batch_size: 100)
+client.collections['companies'].documents.import(documents_jsonl, batch_size: 100)
 ```
 
   </template>
@@ -699,15 +701,16 @@ await client.collection('companies').documents.importJSONL(file.readAsStringSync
 ```java
 File myObj = new File("documents.jsonl");
 Scanner myReader = new Scanner(myObj);
-String documentsInJsonl;
+StringBuilder jsonlBuilder = new StringBuilder();
 while (myReader.hasNextLine()) {
-    String documentsInJsonl = datdocumentsInJsonl.append(myReader.nextLine());
+    jsonlBuilder.append(myReader.nextLine()).append("\n");
 }
+String documentsInJsonl = jsonlBuilder.toString();
 
 ImportDocumentsParameters queryParameters = new ImportDocumentsParameters();
 queryParameters.batchSize(100);
 
-client.collections("companies").documents().import_(documentsInJsonl, queryParameters)
+client.collections("companies").documents().import_(documentsInJsonl, queryParameters);
 ```
 
   </template>
@@ -812,7 +815,7 @@ client.collections['titles'].documents.create(document,
 ```dart
 final document = {'title': 1984, 'points': 100};
 
-await client.collection('companies').documents.create(document, options: {'dirty_values': 'coerce_or_reject'};
+await client.collection('titles').documents.create(document, options: {'dirty_values': 'coerce_or_reject'});
 
 ```
 
@@ -952,7 +955,7 @@ client.collections('companies').documents().import(documentsInJsonl, {action: 'c
 
 ```php
 $documentsInJsonl = file_get_contents('documents.jsonl');
-client.collections['companies'].documents.import($documentsInJsonl, ['action' => 'create']);
+$client->collections['companies']->documents->import($documentsInJsonl, ['action' => 'create']);
 ```
 
   </template>
@@ -968,7 +971,7 @@ with open('documents.jsonl') as jsonl_file:
 
 ```rb
 documents_jsonl = File.read('documents.jsonl')
-collections['companies'].documents.import(documents_jsonl, action: 'create')
+client.collections['companies'].documents.import(documents_jsonl, action: 'create')
 
 ```
 
@@ -1117,7 +1120,7 @@ await client.collection('companies').document('124').retrieve();
   <template v-slot:Java>
 
 ```java
-Hashmap<String, Object> document = client.collections("companies").documents("124").retrieve();
+Map<String, Object> document = client.collections("companies").documents("124").retrieve();
 ```
 
   </template>
@@ -1139,7 +1142,7 @@ let document = try decoder.decode(Company.self, from: data!)
   <template v-slot:Shell>
 
 ```bash
-$ curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" -X GET \
+curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" -X GET \
       "http://localhost:8108/collections/companies/documents/124"
 ```
 
@@ -1253,7 +1256,7 @@ HashMap<String, Object> document = new HashMap<>();
 document.put("company_name","Stark Industries");
 document.put("num_employees",5500);
 
-HashMap<String, Object> updatedDocument = client.collections("companies").documents("124").update(document)
+Map<String, Object> updatedDocument = client.collections("companies").documents("124").update(document);
 ```
 
   </template>
@@ -1277,7 +1280,7 @@ client.Collection("companies").Document("124").Update(context.Background(), docu
 ```swift
 let document = Company(
   company_name: "Stark Industries",
-  num_employees: 5500,
+  num_employees: 5500
 )
 
 let documentData = try encoder.encode(document)
@@ -1382,7 +1385,7 @@ final document = {
   'tag': 'large'
 };
 
-await client.collection('companies').document.update(document, {filter_by: 'num_employees:>1000'});
+await client.collection('companies').documents.update(document, options: {'filter_by': 'num_employees:>1000'});
 ```
 
   </template>
@@ -1394,7 +1397,7 @@ document.put("tag","large");
 UpdateDocumentsParameters updateDocumentsParameters = new UpdateDocumentsParameters();
 updateDocumentsParameters.filterBy("num_employees:>1000");
 
-HashMap<String, Object> updatedDocument = client.collections("companies").documents().update(document, updateDocumentsParameters)
+Map<String, Integer> result = client.collections("companies").documents().update(document, updateDocumentsParameters);
 ```
 
 </template>
@@ -1490,7 +1493,7 @@ await client.collection('companies').document('124').delete();
   <template v-slot:Java>
 
 ```java
-HashMap<String, Object> deletedDocument = client.collections("companies").documents("124").delete();
+Map<String, Object> deletedDocument = client.collections("companies").documents("124").delete();
 ```
 
   </template>
@@ -1606,8 +1609,7 @@ client.Collection("companies").Documents().Delete(context.Background(), &api.Del
   <template v-slot:Swift>
 
 ```swift
-let (data, response) = try await client.collection(name: "companies").documents().delete(filter: "num_employees:>100")
-let document = try decoder.decode(Company.self, from: data!)
+let (deleteResponse, response) = try await client.collection(name: "companies").documents().delete(options: DeleteDocumentsParameters(filterBy: "num_employees:>100"))
 ```
 
   </template>
@@ -1615,7 +1617,7 @@ let document = try decoder.decode(Company.self, from: data!)
 
 ```bash
 curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" -X DELETE \
-"http://localhost:8108/collections/companies/documents?filter_by=num_employees:>=100&batch_size=100"
+"http://localhost:8108/collections/companies/documents?filter_by=num_employees:>100&batch_size=100"
 
 ```
 
@@ -1674,7 +1676,7 @@ $client->collections['companies']->documents->delete(['truncate' => true]);
   <template v-slot:Python>
 
 ```py
-client.collections['companies'].documents.delete({'truncate': true})
+client.collections['companies'].documents.delete({'truncate': True})
 ```
 
   </template>
@@ -1688,21 +1690,23 @@ client.collections['companies'].documents.delete(truncate: true)
   <template v-slot:Dart>
 
 ```dart
-await client.collection('companies').documents.delete({'truncate': true});
+await client.collection('companies').documents.delete({'truncate': 'true'});
 ```
 
   </template>
   <template v-slot:Java>
 
 ```java
-CollectionResponse response = client.collections("companies").documents().delete(new DeleteDocumentsParameters().truncate(true));
+Map<String, Object> response = client.collections("companies").documents().delete(new DeleteDocumentsParameters().truncate(true));
 ```
 
   </template>
   <template v-slot:Swift>
 
 ```swift
-let (response, httpResponse) = try await client.collection(name: "companies").documents().delete(parameters: DeleteDocumentsParams(truncate: true))
+// typesense-swift does not expose the truncate parameter yet,
+// so delete with a filter that matches every document instead
+let (response, httpResponse) = try await client.collection(name: "companies").documents().delete(options: DeleteDocumentsParameters(filterBy: "num_employees:>=0"))
 ```
 
   </template>
@@ -1781,7 +1785,7 @@ await client.collection('companies').documents.exportJSONL();
 
 ```java
 ExportDocumentsParameters exportDocumentsParameters = new ExportDocumentsParameters();
-exportDocumentsParameters.setIncludeFields("id,publication_year,authors");
+exportDocumentsParameters.setIncludeFields("id,company_name,num_employees");
 client.collections("companies").documents().export(exportDocumentsParameters);
 ```
 

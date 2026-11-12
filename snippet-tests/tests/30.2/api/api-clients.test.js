@@ -11,8 +11,9 @@ module.exports = {
       skip: 'installation instructions, not runnable code',
       // The Python, PHP and Ruby tabs hold a single shell install command
       // (pip, composer, gem), so their language's syntax checks do not apply.
-      // The JavaScript, Dart, Java, Go and Swift tabs show code and are checked.
-      static: { python: false, php: false, ruby: false },
+      // The Go tab is a bare import block, which is not a Go file on its own.
+      // The JavaScript, Dart, Java and Swift tabs show code and are checked.
+      static: { python: false, php: false, ruby: false, go: false },
     },
   },
 }

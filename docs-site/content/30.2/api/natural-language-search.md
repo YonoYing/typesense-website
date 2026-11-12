@@ -116,7 +116,7 @@ curl -X POST http://localhost:8108/nl_search_models \
    }
    ```
 
-3. **vLLM Self-hosted Models**:
+4. **vLLM Self-hosted Models**:
    ```json{2}
    {
      "model_name": "vllm/mistral-7b-instruct",
@@ -127,7 +127,7 @@ curl -X POST http://localhost:8108/nl_search_models \
    }
    ```
 
-4. **Google Gemini Models**:
+5. **Google Gemini Models**:
    ```json{3}
    {
      "id": "gemini-flash",
@@ -149,7 +149,7 @@ curl -X POST http://localhost:8108/nl_search_models \
    Get your Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
    :::
 
-5. **GCP Vertex AI Models**:
+6. **GCP Vertex AI Models**:
    Typesense supports two authentication methods for GCP Vertex AI:
 
    1. **OAuth Authentication** - Using access tokens and refresh tokens
@@ -311,8 +311,7 @@ Here's an example response structure when using natural language search:
           "snippet": "Classic <mark>Red</mark> T-<mark>Shirt</mark>"
         }
       ]
-    },
-    // ... more hits
+    }
   ],
   "parsed_nl_query": {
     "parse_time_ms": 428,
@@ -570,7 +569,8 @@ Typesense caches the schema prompts used for natural language processing to impr
 
 ```bash
 curl "http://localhost:8108/collections/products/documents/search" \
--H "X-TYPESENSE-API-KEY: ${API_KEY}" \
+-H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+-G \
 --data-urlencode "q=red shirts" \
 --data-urlencode "nl_query=true" \
 --data-urlencode "query_by=name,description,color,category" \

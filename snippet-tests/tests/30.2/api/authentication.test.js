@@ -8,14 +8,15 @@
 module.exports = {
   snippets: {
     'authentication': {
-      // The JavaScript tab holds two client setups (CommonJS and ES modules)
-      // in one block, which cannot run as one file; the static checks report it.
+      // The JavaScript tab only constructs a Client and a SearchClient, so
+      // running without errors is its whole check; the curl tab searches.
       skip: { shell: 'sets TYPESENSE_API_KEY to the <API_KEY> placeholder on purpose' },
       // Guessed from the curl example: GET /collections/companies/documents/search?q&query_by&filter_by&sort_by&x-typesense-api-key
       async setup({ ensureCollection }) {
         await ensureCollection('companies')
       },
-      async verify({ assert, response }) {
+      async verify({ assert, response, lang }) {
+        if (lang === 'js') return
         assert.ok(Array.isArray(response.hits), 'expected search hits')
         assert.equal(typeof response.found, 'number')
       },

@@ -110,21 +110,22 @@ module.exports = {
       },
     },
     'using-openai-api': {
-      skip: { shell: 'needs an OpenAI API key' },
+      skip: 'needs an OpenAI API key',
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'using-azure-openai-api': {
+      skip: 'needs an Azure OpenAI endpoint and key',
     },
     'using-openai-compatible-apis': {
-      skip: { shell: 'needs an OpenAI-compatible API endpoint and key' },
+      skip: 'needs an OpenAI-compatible API endpoint and key',
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'using-google-palm-api': {
-      skip: { shell: 'needs a Google API key' },
+      skip: 'needs a Google API key',
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
@@ -138,7 +139,7 @@ module.exports = {
       },
     },
     'oauth-authentication': {
-      skip: { shell: 'needs Google OAuth credentials' },
+      skip: 'needs Google OAuth credentials',
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
@@ -167,13 +168,13 @@ module.exports = {
       },
     },
     'model-config-file': {
-      skip: { shell: 'needs custom model files on the server' },
+      skip: 'needs custom model files on the server',
       async setup({ dropCollection }) {
         await dropCollection('products')
       },
     },
     'indexing-prefix-and-query-prefix': {
-      skip: { shell: 'needs custom model files on the server' },
+      skip: 'needs custom model files on the server',
       async setup({ dropCollection }) {
         await dropCollection('products')
       },

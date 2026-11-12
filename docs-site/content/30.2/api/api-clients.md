@@ -46,8 +46,8 @@ retries, and caching.
 ```js
 // npm install typesense @babel/runtime
 
-// Browser
-<script src="dist/typesense.min.js"></script>
+// Browser:
+// <script src="dist/typesense.min.js"></script>
 ```
 
   </template>
@@ -84,7 +84,7 @@ gem install typesense
 
 // This will add a line like this to your package's pubspec.yaml:
 // dependencies:
-//   typesense: ^0.3.0
+//   typesense: ^0.6.0
 
 // Now in your Dart code, you can use:
 
@@ -100,7 +100,7 @@ import 'package:typesense/typesense.dart';
 // And the import it them to your project
 
 import org.typesense.api.*;
-import org.typesense.models.*;
+import org.typesense.model.*;
 import org.typesense.resources.*;
 ```
 
@@ -127,7 +127,7 @@ import (
 //For swift packages, add typesense-swift to the dependencies array in Package.swift:
 ...
 dependencies: [
-           .package(url: "https://github.com/typesense/typesense-swift", .upToNextMajor(from: "0.1.0"),
+           .package(url: "https://github.com/typesense/typesense-swift", .upToNextMajor(from: "1.0.1")),
 ],
 ...
 ```

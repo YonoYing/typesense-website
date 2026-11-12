@@ -50,9 +50,9 @@ curl "http://localhost:8108/multi_search" -X POST \
       "searches": [
         {
           "collection": "books",
-          "q": "the"
-          "query_b": "title"
-          "stopwords": "stopword_set1",
+          "q": "the",
+          "query_by": "title",
+          "stopwords": "stopword_set1"
         }
       ]
     }'
@@ -73,16 +73,16 @@ To get stopwords associated with a specific stopwords set:
 
 ```shell
 curl -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
-  "http://localhost:8108/stopwords/countries" 
+  "http://localhost:8108/stopwords/stopword_set1"
 ```
 
 ## Updating stopwords
 
 We can overwrite a stopwords set with a new set of stopwords. For example, to overwrite the stopwords associated 
-with the set `countries`, we can do:
+with the set `stopword_set1`, we can do:
 
 ```shell
-curl "http://localhost:8108/stopwords/countries" -X PUT \
+curl "http://localhost:8108/stopwords/stopword_set1" -X PUT \
   -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
   -d '{"stopwords": ["Germany", "France", "Italy"], "locale": "en"}'
 ```
